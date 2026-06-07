@@ -1,0 +1,38 @@
+services:
+  home:
+    image: ghcr.io/${REGISTRY_OWNER}/zenmac-home:${IMAGE_TAG:-latest}
+    container_name: zenmac-home
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3330:80"
+    networks:
+      - zenmac-net
+
+  zenmac-frontend:
+    image: ghcr.io/${REGISTRY_OWNER}/zenmac-frontend:${IMAGE_TAG:-latest}
+    container_name: zenmac-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3332:80"
+    networks:
+      - zenmac-net
+
+  zenmac-backend:
+    image: ghcr.io/${REGISTRY_OWNER}/zenmac-backend:${IMAGE_TAG:-latest}
+    container_name: zenmac-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3323:3323"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3323
+      - MQTT_BROKER_URL=mqtt://host.docker.internal:1884
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - zenmac-net
+
+networks:
+  zenmac-net:
+    name: zenmac-net
+    driver: bridge
