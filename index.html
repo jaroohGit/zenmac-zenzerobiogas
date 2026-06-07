@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zenmac - Project Hub</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07111f;
+        --bg-2: #0c1b31;
+        --panel: rgba(10, 22, 40, 0.82);
+        --panel-strong: rgba(14, 29, 53, 0.94);
+        --text: #eaf2ff;
+        --muted: #9db0cc;
+        --line: rgba(166, 189, 221, 0.16);
+        --accent: #51d0ff;
+        --accent-2: #8b5cf6;
+        --success: #34d399;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(circle at top left, rgba(81, 208, 255, 0.18), transparent 30%),
+          radial-gradient(circle at right 20%, rgba(139, 92, 246, 0.14), transparent 28%),
+          linear-gradient(180deg, var(--bg), var(--bg-2));
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 44px 44px;
+        mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
+        opacity: 0.25;
+      }
+
+      .shell {
+        position: relative;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 18px;
+        border: 1px solid var(--line);
+        background: rgba(7, 17, 31, 0.48);
+        backdrop-filter: blur(18px);
+        border-radius: 20px;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-badge {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #04101d;
+        font-size: 18px;
+        box-shadow: 0 10px 30px rgba(81, 208, 255, 0.28);
+      }
+
+      .pill {
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.3fr 0.9fr;
+        gap: 24px;
+        margin-top: 28px;
+        align-items: stretch;
+      }
+
+      .hero-card,
+      .sidebar-card,
+      .project-card,
+      .note-card {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 28px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+        backdrop-filter: blur(22px);
+      }
+
+      .hero-card {
+        padding: 34px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .hero-card::after {
+        content: "";
+        position: absolute;
+        inset: auto -8% -45% auto;
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(81, 208, 255, 0.24), transparent 68%);
+        filter: blur(6px);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.3rem, 6vw, 4.9rem);
+        line-height: 0.95;
+        letter-spacing: -0.05em;
+      }
+
+      .lead {
+        margin: 18px 0 0;
+        max-width: 56ch;
+        color: var(--muted);
+        font-size: 1.03rem;
+        line-height: 1.75;
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 26px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        color: var(--text);
+        text-decoration: none;
+        transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        border-color: rgba(81, 208, 255, 0.45);
+        background: rgba(81, 208, 255, 0.08);
+      }
+
+      .btn.primary {
+        background: linear-gradient(135deg, var(--accent), #72f0c5);
+        color: #04101d;
+        border-color: transparent;
+        font-weight: 700;
+      }
+
+      .btn.primary:hover {
+        background: linear-gradient(135deg, #6ad7ff, #8cf6d2);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 28px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .stat {
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 1.1rem;
+      }
+
+      .stat span {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .sidebar-card {
+        padding: 24px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .sidebar-title {
+        margin: 0;
+        font-size: 1.05rem;
+        letter-spacing: 0.01em;
+      }
+
+      .project-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .project-card {
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-height: 210px;
+      }
+
+      .project-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 11px;
+        border-radius: 999px;
+        background: rgba(81, 208, 255, 0.09);
+        border: 1px solid rgba(81, 208, 255, 0.18);
+        color: #c2ecff;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .project-card h2 {
+        margin: 0;
+        font-size: 1.4rem;
+      }
+
+      .project-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .project-links {
+        margin-top: auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .project-links a,
+      .project-links span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 0.92rem;
+      }
+
+      .project-links a {
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .project-links a:hover {
+        border-color: rgba(139, 92, 246, 0.5);
+        background: rgba(139, 92, 246, 0.1);
+      }
+
+      .project-links .ghost {
+        color: var(--muted);
+      }
+
+      .note-card {
+        margin-top: 18px;
+        padding: 18px 22px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .footer {
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 0.92rem;
+        text-align: center;
+      }
+
+      @media (max-width: 920px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        .project-grid,
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-badge">Z</div>
+          <div>
+            <div>Zenmac Project Hub</div>
+            <div class="pill">zenmac.zenzerobiogas.com</div>
+          </div>
+        </div>
+        <div class="pill">Frontend + Backend pairs</div>
+      </header>
+
+      <section class="hero">
+        <article class="hero-card">
+          <div class="pill">Home page</div>
+          <h1>One home for every project pair.</h1>
+          <p class="lead">
+            This landing page sits at the root of <strong>zenmac-zenzerobiogas</strong> and acts as the
+            shared home for future pairs such as <strong>zenmac-frontend / zenmac-backend</strong>.
+            Each project gets its own frontend and backend folder, while this home page keeps the
+            navigation and overview in one place.
+          </p>
+
+          <div class="cta-row">
+            <a class="btn primary" href="/landing-page/">Open Landing Page</a>
+            <a class="btn" href="#projects">View Project Menu</a>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <strong>Home</strong>
+              <span>Root landing page for zenmac</span>
+            </div>
+            <div class="stat">
+              <strong>Pair-based</strong>
+              <span>Frontend and backend side by side</span>
+            </div>
+            <div class="stat">
+              <strong>Future-ready</strong>
+              <span>Easy to add more project pairs</span>
+            </div>
+          </div>
+        </article>
+
+        <aside class="sidebar-card">
+          <h2 class="sidebar-title">Recommended structure</h2>
+          <div class="pill">/home/teddy/zenmac-zenzerobiogas</div>
+          <div class="note-card" style="margin:0">
+            <strong style="color: var(--text)">Current layout</strong><br />
+            <span>root home page</span> + <span>zenmac-frontend</span> + <span>zenmac-backend</span>
+            <br />
+            Add new pairs later as <code>xx-frontend</code> and <code>xx-backend</code>.
+          </div>
+          <div class="note-card" style="margin:0">
+            <strong style="color: var(--text)">Deployment target</strong><br />
+            <span>zenmac.zenzerobiogas.com</span> should point to this home page, while the named landing path is <span>zenmac.zenzerobiogas.com/landing-page</span>.
+          </div>
+        </aside>
+      </section>
+
+      <section id="projects" class="project-grid">
+        <article class="project-card">
+          <div class="project-meta">
+            <span class="tag">Live</span>
+            <span class="pill">frontend</span>
+          </div>
+          <h2>KD Frontend</h2>
+          <p>
+            Existing Vue dashboard project, kept as the dedicated frontend of the KD pair.
+            This is where the app-specific UI lives.
+          </p>
+          <div class="project-links">
+            <a href="/landing-page/">Open landing</a>
+            <span class="ghost">zenmac-frontend</span>
+          </div>
+        </article>
+
+        <article class="project-card">
+          <div class="project-meta">
+            <span class="tag" style="background: rgba(139, 92, 246, 0.09); border-color: rgba(139, 92, 246, 0.18); color:#eadcff;">Planned</span>
+            <span class="pill">backend</span>
+          </div>
+          <h2>KD Backend</h2>
+          <p>
+            Reserved for the companion API service. Keep backend code in a sibling folder so the pair is
+            easy to deploy, version, and scale independently.
+          </p>
+          <div class="project-links">
+            <span class="ghost">kd-backend</span>
+            <span class="ghost">coming soon</span>
+          </div>
+        </article>
+      </section>
+
+      <div class="footer">
+        Built for future pairs, served from a single home page.
+      </div>
+    </main>
+  </body>
+</html>
