@@ -7,6 +7,7 @@
         <li><a href="#mission">Philosophy</a></li>
         <li><a href="#modules">Modules</a></li>
         <li><router-link to="/kd/app/overview">Dashboard</router-link></li>
+        <li><router-link to="/login" class="l-login-btn">Login</router-link></li>
       </ul>
       <div class="l-mqtt-pill" :class="mqttConnected ? 'mqtt-on' : 'mqtt-off'">
         <span class="mqtt-dot"></span>
@@ -206,6 +207,15 @@ export default {
   text-decoration: none; padding: 5px 14px; border-radius: 6px; transition: all .15s;
 }
 .l-nav-links a:hover { color: #fff; background: rgba(255,255,255,.05); }
+.l-nav-links .l-login-btn {
+  color: #111;
+  background: linear-gradient(135deg, #d4a040, #f0c060);
+  font-weight: 700;
+}
+.l-nav-links .l-login-btn:hover {
+  color: #111;
+  background: linear-gradient(135deg, #e0b55a, #f5cb75);
+}
 .l-mqtt-pill {
   font-family: 'JetBrains Mono', monospace; font-size: 11px;
   letter-spacing: .08em; padding: 4px 12px; border-radius: 20px;
