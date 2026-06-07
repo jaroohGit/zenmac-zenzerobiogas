@@ -56,7 +56,7 @@
               <div class="ov-title" style="color:#a855f7">EQUALIZING TANK</div>
               <div class="ov-row"><span class="ov-b b-on">NORMAL</span><span class="ov-b b-s">Level OK</span></div>
             </div>
-            <div class="ov bdr-g" style="left:30%;top:24%">
+            <div class="ov bdr-g" style="left:26%;top:8%">
               <div class="ov-title" style="color:#00e87a">BLOWER SYSTEM</div>
               <div class="ov-row">
                 <span class="ov-b b-blo">BL-1: {{ tb1Status || '—' }}</span>
@@ -173,15 +173,19 @@ function makeDataset(label, color) {
   return {
     label, data: [],
     borderColor: color, backgroundColor: color + '18',
-    borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: true,
+    borderWidth: 1.5, pointRadius: 3, pointHoverRadius: 5,
+    pointBackgroundColor: color, pointBorderColor: color,
+    tension: 0.3, fill: true,
   };
 }
 
-function makeLabels(n = 24) {
-  return Array.from({ length: n }, (_, i) => {
-    const d = new Date(); d.setHours(d.getHours() - (n - 1 - i));
-    return `${String(d.getHours()).padStart(2,'0')}:00`;
-  });
+function makeLabels() {
+  const labels = [];
+  for (let i = 0; i < 24; i++) {
+    const h = (8 + i) % 24;
+    labels.push(`${String(h).padStart(2,'0')}:00`);
+  }
+  return labels;
 }
 
 export default {
