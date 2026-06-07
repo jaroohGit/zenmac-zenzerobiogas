@@ -52,11 +52,11 @@
               <div class="ov-title" style="color:#ffb800">SLUDGE DEWATERING</div>
               <div class="ov-row"><span class="ov-b b-on">RUN</span><span class="ov-b b-s">Normal</span></div>
             </div>
-            <div class="ov bdr-p" style="left:42%;top:4%">
+            <div class="ov bdr-p" style="left:50%;top:4%">
               <div class="ov-title" style="color:#a855f7">EQUALIZING TANK</div>
               <div class="ov-row"><span class="ov-b b-on">NORMAL</span><span class="ov-b b-s">Level OK</span></div>
             </div>
-            <div class="ov bdr-g" style="left:33%;top:27%">
+            <div class="ov bdr-g" style="left:30%;top:24%">
               <div class="ov-title" style="color:#00e87a">BLOWER SYSTEM</div>
               <div class="ov-row">
                 <span class="ov-b b-blo">BL-1: {{ tb1Status || '—' }}</span>
@@ -64,14 +64,14 @@
                 <span class="ov-b b-stby">BL-2: {{ tb2Status || 'STBY' }}</span>
               </div>
             </div>
-            <div class="ov bdr-o" style="left:14%;top:49%">
+            <div class="ov bdr-o" style="left:14%;top:42%">
               <div class="ov-title" style="color:#ff7820">AT-SERUM (บ่อ 1)</div>
               <div class="ov-row">
                 <span class="ov-b b-s">ORP {{ fmtNum(serumORP) }} mV</span>
                 <span class="ov-b b-on">pH {{ fmtNum(serumpH) }}</span>
               </div>
             </div>
-            <div class="ov bdr-t" style="left:46%;top:49%">
+            <div class="ov bdr-t" style="left:46%;top:42%">
               <div class="ov-title" style="color:#00c8b0">AT-LATEX (บ่อ 2)</div>
               <div class="ov-row">
                 <span class="ov-b b-s">ORP {{ fmtNum(processORP) }} mV</span>
@@ -287,8 +287,8 @@ export default {
   padding: 14px 16px;
   font-family: 'Inter', 'Segoe UI', sans-serif;
   display: flex; flex-direction: column; gap: 10px;
-  height: calc(100vh - 56px - 37px);
-  overflow: hidden;
+  min-height: calc(100vh - 56px - 37px);
+  overflow-y: auto;
   background:
     radial-gradient(ellipse 60% 50% at 80% 20%, rgba(212,160,64,.04) 0%, transparent 60%),
     radial-gradient(ellipse 40% 40% at 10% 80%, rgba(0,212,255,.03) 0%, transparent 55%),
@@ -323,7 +323,7 @@ export default {
 .kpi-sub  { font-size: 11px; color: rgba(255,255,255,.18); margin-top: 2px; }
 
 /* ── MID ROW ── */
-.mid-row { display: grid; grid-template-columns: minmax(0, 837px) 1fr; gap: 8px; flex: 1; min-height: 0; }
+.mid-row { display: grid; grid-template-columns: minmax(0, 837px) 1fr; gap: 8px; height: 420px; flex-shrink: 0; }
 .ov-card {
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.08);
@@ -373,31 +373,31 @@ export default {
 }
 .sensor-hdr {
   display: flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 700; margin-bottom: 8px;
+  font-size: 14px; font-weight: 700; margin-bottom: 8px;
   color: rgba(255,255,255,.75);
 }
 .sensor-acc { width: 3px; height: 14px; border-radius: 2px; flex-shrink: 0; }
-.sensor-sub { font-size: 9px; color: rgba(255,255,255,.2); margin-left: auto; }
+.sensor-sub { font-size: 11px; color: rgba(255,255,255,.2); margin-left: auto; }
 .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .sensor-item {
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.06);
   border-radius: 7px; padding: 7px 8px;
 }
-.si-tag { font-size: 8px; font-weight: 600; color: rgba(255,255,255,.2); letter-spacing: .06em; margin-bottom: 1px; }
-.si-name { font-family: 'JetBrains Mono',monospace; font-size: 11px; font-weight: 700; margin-bottom: 2px; }
+.si-tag { font-size: 10px; font-weight: 600; color: rgba(255,255,255,.2); letter-spacing: .06em; margin-bottom: 1px; }
+.si-name { font-family: 'JetBrains Mono',monospace; font-size: 13px; font-weight: 700; margin-bottom: 2px; }
 .si-orp { color: #e0956a; }
 .si-ph  { color: #6aaa88; }
-.si-val { font-family: 'JetBrains Mono',monospace; font-size: 18px; font-weight: 700; color: rgba(255,255,255,.8); line-height: 1.1; }
-.si-unit { font-size: 9px; font-weight: 400; color: rgba(255,255,255,.28); }
-.si-badge { font-family: 'JetBrains Mono',monospace; font-size: 9px; font-weight: 700; margin-top: 4px; letter-spacing: .04em; }
+.si-val { font-family: 'JetBrains Mono',monospace; font-size: 22px; font-weight: 700; color: rgba(255,255,255,.8); line-height: 1.1; }
+.si-unit { font-size: 11px; font-weight: 400; color: rgba(255,255,255,.28); }
+.si-badge { font-family: 'JetBrains Mono',monospace; font-size: 11px; font-weight: 700; margin-top: 4px; letter-spacing: .04em; }
 .ss-ok   { color: #b8e834; }
 .ss-low  { color: #ffb800; }
 .ss-warn { color: #ff5050; }
 .ss-off  { color: rgba(255,255,255,.2); }
 
 /* ── CHARTS ── */
-.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex-shrink: 0; height: 110px; }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex-shrink: 0; height: 154px; }
 .chart-card {
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.08);
