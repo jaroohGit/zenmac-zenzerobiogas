@@ -11,28 +11,30 @@
         <span></span><span></span><span></span>
       </button>
 
-      <div class="kd-logo-mark">
-        <svg width="44" height="44" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="logoBox" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#ff8c00"/>
-              <stop offset="100%" stop-color="#c0392b"/>
-            </linearGradient>
-          </defs>
-          <rect x="2" y="2" width="48" height="48" rx="10" ry="10" fill="#111820" stroke="url(#logoBox)" stroke-width="2.5"/>
-          <rect x="8"  y="30" width="5" height="14" rx="2" fill="#c0392b"/>
-          <rect x="15" y="24" width="5" height="20" rx="2" fill="#d4511e"/>
-          <rect x="22" y="16" width="5" height="28" rx="2" fill="#e87020"/>
-          <rect x="29" y="20" width="5" height="24" rx="2" fill="#f59b30"/>
-          <rect x="36" y="12" width="5" height="32" rx="2" fill="#ffb800"/>
-          <line x1="7" y1="45" x2="45" y2="45" stroke="#ffb80050" stroke-width="1"/>
-        </svg>
-      </div>
+      <router-link to="/" class="kd-logo-link" aria-label="Go to home">
+        <div class="kd-logo-mark">
+          <svg width="44" height="44" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="logoBox" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#ff8c00"/>
+                <stop offset="100%" stop-color="#c0392b"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="48" height="48" rx="10" ry="10" fill="#111820" stroke="url(#logoBox)" stroke-width="2.5"/>
+            <rect x="8"  y="30" width="5" height="14" rx="2" fill="#c0392b"/>
+            <rect x="15" y="24" width="5" height="20" rx="2" fill="#d4511e"/>
+            <rect x="22" y="16" width="5" height="28" rx="2" fill="#e87020"/>
+            <rect x="29" y="20" width="5" height="24" rx="2" fill="#f59b30"/>
+            <rect x="36" y="12" width="5" height="32" rx="2" fill="#ffb800"/>
+            <line x1="7" y1="45" x2="45" y2="45" stroke="#ffb80050" stroke-width="1"/>
+          </svg>
+        </div>
 
-      <div class="kd-logo-text">
-        <div class="kd-logo-name">ZenMAC</div>
-        <div class="kd-logo-sub">ZENZERO MONITOR ANALYSIS &amp; CONTROL</div>
-      </div>
+        <div class="kd-logo-text">
+          <div class="kd-logo-name">ZenMAC</div>
+          <div class="kd-logo-sub">ZENZERO MONITOR ANALYSIS &amp; CONTROL</div>
+        </div>
+      </router-link>
 
       <div class="kd-hdr-div kd-hide-sm"></div>
       <span class="kd-site-name kd-hide-sm">STA-KD &rsaquo; Serum &amp; Latex Process &mdash; WASTEWATER TREATMENT</span>

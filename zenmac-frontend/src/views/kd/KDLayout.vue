@@ -28,7 +28,7 @@
     <!-- ── SIDEBAR ──────────────────────────────────────────────── -->
     <aside class="kd-sidebar">
       <!-- Logo -->
-      <div class="kd-sidebar-logo">
+      <router-link to="/" class="kd-sidebar-logo" aria-label="Go to home">
         <div class="kd-logo-icon">
           <div class="lb lb1"></div>
           <div class="lb lb2"></div>
@@ -43,7 +43,7 @@
             <div class="kd-sidebar-logo-sub">ZENZERO MONITOR ANALYSIS &amp; CONTROL</div>
           </div>
         </transition>
-      </div>
+      </router-link>
 
       <div class="kd-sidebar-divider"></div>
 
