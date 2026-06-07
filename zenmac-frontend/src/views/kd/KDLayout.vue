@@ -7,6 +7,25 @@
         <button class="kd-toggle-btn" @click="collapsed = !collapsed">
           <i class="bx" :class="collapsed ? 'bx-menu' : 'bx-menu-alt-left'"></i>
         </button>
+
+        <!-- ZenMAC brand — moved from sidebar -->
+        <router-link to="/" class="kd-topbar-logo" aria-label="Go to home">
+          <div class="kd-tl-icon">
+            <div class="lb lb1"></div>
+            <div class="lb lb2"></div>
+            <div class="lb lb3"></div>
+            <div class="lb lb4"></div>
+            <div class="lb lb5"></div>
+            <div class="lb lb6"></div>
+          </div>
+          <div class="kd-tl-text">
+            <div class="kd-tl-name">ZenMAC</div>
+            <div class="kd-tl-sub">ZENZERO MONITOR ANALYSIS &amp; CONTROL</div>
+          </div>
+        </router-link>
+
+        <div class="kd-tl-sep"></div>
+
         <div class="kd-topbar-brand">
           <span class="kd-topbar-system">STA-KD</span>
           <span class="kd-topbar-sep">›</span>
@@ -27,47 +46,60 @@
 
     <!-- ── SIDEBAR ──────────────────────────────────────────────── -->
     <aside class="kd-sidebar">
-      <!-- Logo -->
-      <router-link to="/" class="kd-sidebar-logo" aria-label="Go to home">
-        <div class="kd-logo-icon">
-          <div class="lb lb1"></div>
-          <div class="lb lb2"></div>
-          <div class="lb lb3"></div>
-          <div class="lb lb4"></div>
-          <div class="lb lb5"></div>
-          <div class="lb lb6"></div>
-        </div>
-        <transition name="fade">
-          <div v-if="!collapsed" class="kd-sidebar-logo-text">
-            <div class="kd-sidebar-logo-name">ZenMAC</div>
-            <div class="kd-sidebar-logo-sub">ZENZERO MONITOR ANALYSIS &amp; CONTROL</div>
-          </div>
-        </transition>
-      </router-link>
 
-      <div class="kd-sidebar-divider"></div>
+      <div class="kd-sidebar-divider" style="margin-top:8px"></div>
 
       <!-- Menu label -->
       <div class="kd-sidebar-section-label" v-if="!collapsed">MAIN MENU</div>
 
       <!-- Nav items -->
       <nav class="kd-sidebar-nav">
-        <router-link
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="kd-nav-link"
-          :class="{ active: $route.path.startsWith(item.to) }"
-          :title="collapsed ? item.label : ''"
-        >
-          <span class="kd-nav-icon"><i :class="item.icon"></i></span>
-          <transition name="fade">
-            <span v-if="!collapsed" class="kd-nav-label">{{ item.label }}</span>
-          </transition>
-          <transition name="fade">
-            <span v-if="!collapsed && item.badge" class="kd-nav-badge" :class="item.badgeClass">{{ item.badge }}</span>
-          </transition>
-        </router-link>
+        <template v-for="item in navItems" :key="item.label">
+          <!-- Parent with children -->
+          <template v-if="item.children">
+            <div class="kd-nav-link kd-nav-parent"
+              :class="{ active: item.children.some(c => $route.path.startsWith(c.to)) }"
+              :title="collapsed ? item.label : ''"
+              @click="toggleMenu(item.label)"
+            >
+              <span class="kd-nav-icon"><i :class="item.icon"></i></span>
+              <transition name="fade">
+                <span v-if="!collapsed" class="kd-nav-label">{{ item.label }}</span>
+              </transition>
+              <transition name="fade">
+                <i v-if="!collapsed" class="bx kd-nav-arrow" :class="openMenus.includes(item.label) ? 'bx-chevron-down' : 'bx-chevron-right'"></i>
+              </transition>
+            </div>
+            <div v-if="openMenus.includes(item.label) && !collapsed" class="kd-nav-sub">
+              <router-link
+                v-for="child in item.children"
+                :key="child.to"
+                :to="child.to"
+                class="kd-nav-sub-link"
+                :class="{ active: $route.path.startsWith(child.to) }"
+              >
+                <span class="kd-nav-icon"><i :class="child.icon"></i></span>
+                <span class="kd-nav-label">{{ child.label }}</span>
+              </router-link>
+            </div>
+          </template>
+          <!-- Normal link -->
+          <router-link
+            v-else
+            :to="item.to"
+            class="kd-nav-link"
+            :class="{ active: $route.path.startsWith(item.to) }"
+            :title="collapsed ? item.label : ''"
+          >
+            <span class="kd-nav-icon"><i :class="item.icon"></i></span>
+            <transition name="fade">
+              <span v-if="!collapsed" class="kd-nav-label">{{ item.label }}</span>
+            </transition>
+            <transition name="fade">
+              <span v-if="!collapsed && item.badge" class="kd-nav-badge" :class="item.badgeClass">{{ item.badge }}</span>
+            </transition>
+          </router-link>
+        </template>
       </nav>
 
       <!-- Bottom: live status -->
@@ -120,10 +152,18 @@
 import { mapGetters, mapState } from 'vuex';
 
 const NAV = [
-  { to: '/kd/app/overview',       label: 'Overview',          icon: 'bx bx-map-alt',          badge: 'LIVE', badgeClass: 'badge-live' },
-  { to: '/kd/app/executive',      label: 'Executive Summary', icon: 'bx bx-bar-chart-alt-2',  badge: null },
-  { to: '/kd/app/daily-report',   label: 'Daily Report',      icon: 'bx bx-file-blank',        badge: null },
-  { to: '/kd/app/remote-control', label: 'Remote Control',    icon: 'bx bx-joystick',          badge: null },
+  { to: '/kd/app/overview',     label: 'Overview',          icon: 'bx bx-map-alt',         badge: 'LIVE', badgeClass: 'badge-live' },
+  { to: '/kd/app/executive',    label: 'Executive Summary', icon: 'bx bx-bar-chart-alt-2', badge: null },
+  { to: '/kd/app/daily-report', label: 'Daily Report',      icon: 'bx bx-file-blank',       badge: null },
+  {
+    label: 'Process Control', icon: 'bx bx-cog', badge: null,
+    children: [
+      { to: '/kd/app/pump',      label: 'Pump',      icon: 'bx bx-water' },
+      { to: '/kd/app/blower',    label: 'Blower',    icon: 'bx bx-wind' },
+      { to: '/kd/app/energy',    label: 'Energy',    icon: 'bx bx-bolt-circle' },
+      { to: '/kd/app/auto-mode', label: 'Auto Mode', icon: 'bx bx-brain' },
+    ],
+  },
 ];
 
 const PAGE_TITLES = {
@@ -131,6 +171,10 @@ const PAGE_TITLES = {
   '/kd/app/executive':      'Executive Summary',
   '/kd/app/daily-report':   'Daily Report',
   '/kd/app/remote-control': 'Remote Control',
+  '/kd/app/pump':           'Pump',
+  '/kd/app/blower':         'Blower',
+  '/kd/app/energy':         'Energy',
+  '/kd/app/auto-mode':      'Auto Mode',
 };
 
 export default {
@@ -141,6 +185,7 @@ export default {
       collapsed: false,
       clock: '',
       dateStr: '',
+      openMenus: [],
     };
   },
   computed: {
@@ -167,6 +212,11 @@ export default {
     clearInterval(this._clockTimer);
   },
   methods: {
+    toggleMenu(label) {
+      const i = this.openMenus.indexOf(label);
+      if (i === -1) this.openMenus.push(label);
+      else this.openMenus.splice(i, 1);
+    },
     tickClock() {
       const n = new Date();
       const p = v => String(v).padStart(2, '0');
@@ -239,10 +289,42 @@ export default {
   cursor: pointer; transition: all .2s;
 }
 .kd-toggle-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+/* ── ZenMAC brand in topbar ── */
+.kd-topbar-logo {
+  display: flex; align-items: center; gap: 8px;
+  text-decoration: none; flex-shrink: 0;
+}
+.kd-tl-icon {
+  width: 30px; height: 30px; flex-shrink: 0;
+  background: #0e1219;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.1);
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 1.5px; padding: 5px 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.kd-tl-icon .lb { width: 2.5px; border-radius: 1px 1px 0 0; }
+.kd-tl-text { display: flex; flex-direction: column; }
+.kd-tl-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px; font-weight: 900; letter-spacing: -.02em; line-height: 1;
+  background: linear-gradient(135deg, #e8a020 0%, #d4a040 35%, #f0c060 65%, #c89030 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.kd-tl-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 6px; color: rgba(255,255,255,.28); letter-spacing: .08em;
+  margin-top: 2px; white-space: nowrap;
+}
+.kd-tl-sep {
+  width: 1px; height: 24px; background: rgba(255,255,255,.12);
+  flex-shrink: 0; margin: 0 4px;
+}
+
 .kd-topbar-brand { display: flex; align-items: center; gap: 6px; }
-.kd-topbar-system { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: .04em; }
-.kd-topbar-sep { color: var(--text3); font-size: 16px; }
-.kd-topbar-page { font-size: 14px; color: var(--text2); font-weight: 600; }
+.kd-topbar-system { font-size: 18px; font-weight: 700; color: rgba(184,232,52,.7); letter-spacing: .04em; text-shadow: 0 0 10px rgba(184,232,52,.15); }
+.kd-topbar-sep { color: rgba(255,255,255,.2); font-size: 21px; }
+.kd-topbar-page { font-size: 18px; color: rgba(168,85,247,.7); font-weight: 600; }
 .kd-topbar-right { display: flex; align-items: center; gap: 10px; }
 .kd-topbar-clock {
   font-family: 'JetBrains Mono', monospace;
@@ -285,22 +367,7 @@ export default {
 }
 .sidebar-collapsed .kd-sidebar { width: var(--sidebar-w-collapsed); }
 
-.kd-sidebar-logo {
-  display: flex; align-items: center; gap: 10px;
-  padding: 16px 14px 12px;
-  flex-shrink: 0;
-}
-
-/* CSS bar chart icon — same as Landing page */
-.kd-logo-icon {
-  width: 38px; height: 38px; flex-shrink: 0;
-  background: #12161e;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.08);
-  display: flex; align-items: flex-end; justify-content: center;
-  gap: 3px; padding: 7px 6px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
-}
+/* Bar chart icon colours — shared by topbar + landing */
 .lb { border-radius: 1.5px 1.5px 0 0; width: 4px; flex-shrink: 0; }
 .lb1 { height: 52%; background: linear-gradient(to top, #6a0e0e, #a82828); }
 .lb2 { height: 82%; background: linear-gradient(to top, #a82828, #cc3818); }
@@ -308,18 +375,6 @@ export default {
 .lb4 { height: 76%; background: linear-gradient(to top, #e07020, #d4a040); }
 .lb5 { height: 60%; background: linear-gradient(to top, #c89030, #c8a040); }
 .lb6 { height: 40%; background: linear-gradient(to top, #886010, #a88020); }
-
-.kd-sidebar-logo-name {
-  font-family: 'Inter', sans-serif;
-  font-size: 20px; font-weight: 900; letter-spacing: -.02em; line-height: 1;
-  background: linear-gradient(135deg, #e8a020 0%, #d4a040 35%, #f0c060 65%, #c89030 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-.kd-sidebar-logo-sub {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 6.5px; color: var(--text3); letter-spacing: .08em; margin-top: 2px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 148px;
-}
 
 .kd-sidebar-divider { height: 1px; background: var(--border); margin: 0 12px; flex-shrink: 0; }
 
@@ -348,6 +403,19 @@ export default {
 }
 .kd-nav-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
 .kd-nav-label { flex: 1; }
+.kd-nav-parent { cursor: pointer; }
+.kd-nav-arrow { font-size: 14px; flex-shrink: 0; color: var(--text3); }
+.kd-nav-sub { display: flex; flex-direction: column; gap: 2px; padding-left: 12px; margin-bottom: 4px; }
+.kd-nav-sub-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px; border-radius: 6px;
+  font-size: 12px; color: var(--text2);
+  text-decoration: none; border: 1px solid transparent;
+  transition: all .15s;
+}
+.kd-nav-sub-link:hover { background: var(--bg2); color: var(--text); }
+.kd-nav-sub-link.active { color: var(--amber-brand); background: rgba(212,160,64,.08); border-color: rgba(212,160,64,.2); }
+.kd-nav-sub-link .kd-nav-icon { font-size: 15px; width: 20px; }
 .kd-nav-badge {
   font-family: 'JetBrains Mono', monospace;
   font-size: 8px; letter-spacing: .08em;
