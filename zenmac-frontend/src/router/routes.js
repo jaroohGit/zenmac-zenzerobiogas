@@ -102,6 +102,30 @@ export default [
         component: () => import("../views/kd/remote-control/index.vue"),
         meta: { title: "Remote Control" },
       },
+      {
+        path: "pump",
+        name: "kd-pump",
+        component: () => import("../views/sta-kd/pump/index.vue"),
+        meta: { title: "Pump" },
+      },
+      {
+        path: "blower",
+        name: "kd-blower",
+        component: () => import("../views/kd/blower/index.vue"),
+        meta: { title: "Blower" },
+      },
+      {
+        path: "energy",
+        name: "kd-energy",
+        component: () => import("../views/sta-kd/energy/index.vue"),
+        meta: { title: "Energy" },
+      },
+      {
+        path: "auto-mode",
+        name: "kd-auto-mode",
+        component: () => import("../views/sta-kd/control/index.vue"),
+        meta: { title: "Auto Mode" },
+      },
     ],
   },
 

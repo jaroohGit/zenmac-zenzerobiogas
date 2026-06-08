@@ -52,26 +52,26 @@
               <div class="ov-title" style="color:#ffb800">SLUDGE DEWATERING</div>
               <div class="ov-row"><span class="ov-b b-on">RUN</span><span class="ov-b b-s">Normal</span></div>
             </div>
-            <div class="ov bdr-p" style="left:50%;top:4%">
+            <div class="ov bdr-p" style="left:54%;top:4%">
               <div class="ov-title" style="color:#a855f7">EQUALIZING TANK</div>
               <div class="ov-row"><span class="ov-b b-on">NORMAL</span><span class="ov-b b-s">Level OK</span></div>
             </div>
-            <div class="ov bdr-g" style="left:26%;top:8%">
+            <div class="ov bdr-g" style="left:24%;top:7%">
               <div class="ov-title" style="color:#00e87a">BLOWER SYSTEM</div>
               <div class="ov-row">
-                <span class="ov-b b-blo">BL-1: {{ tb1Status || '—' }}</span>
-                <span class="ov-dot dg"></span>
-                <span class="ov-b b-stby">BL-2: {{ tb2Status || 'STBY' }}</span>
+                <span class="ov-b" :class="blowerRunning(tb1Status) ? 'b-blo' : 'b-stby'">BL-1: {{ blowerLabel(tb1Status) }}</span>
+                <span class="ov-dot" :class="blowerRunning(tb1Status) ? 'dg' : 'dy'"></span>
+                <span class="ov-b" :class="blowerRunning(tb2Status) ? 'b-blo' : 'b-stby'">BL-2: {{ blowerLabel(tb2Status) }}</span>
               </div>
             </div>
-            <div class="ov bdr-o" style="left:14%;top:42%">
+            <div class="ov bdr-o" style="left:15%;top:42%">
               <div class="ov-title" style="color:#ff7820">AT-SERUM (บ่อ 1)</div>
               <div class="ov-row">
                 <span class="ov-b b-s">ORP {{ fmtNum(serumORP) }} mV</span>
                 <span class="ov-b b-on">pH {{ fmtNum(serumpH) }}</span>
               </div>
             </div>
-            <div class="ov bdr-t" style="left:46%;top:42%">
+            <div class="ov bdr-t" style="left:43%;top:42%">
               <div class="ov-title" style="color:#00c8b0">AT-LATEX (บ่อ 2)</div>
               <div class="ov-row">
                 <span class="ov-b b-s">ORP {{ fmtNum(processORP) }} mV</span>
@@ -99,13 +99,11 @@
           <div class="sensor-hdr"><span class="sensor-acc" style="background:#ff7820"></span>AT-SERUM SENSORS<span class="sensor-sub">บ่อ 1</span></div>
           <div class="sensor-grid">
             <div class="sensor-item">
-              <div class="si-tag">ORP SENSOR</div>
               <div class="si-name si-orp">ORP-S-1A</div>
               <div class="si-val">{{ fmtSigned(serumORP) }}<span class="si-unit">mV</span></div>
               <div class="si-badge" :class="orpStatusClass(serumORP)">{{ orpLabel(serumORP) }}</div>
             </div>
             <div class="sensor-item">
-              <div class="si-tag">pH SENSOR</div>
               <div class="si-name si-ph">pH-S-1A</div>
               <div class="si-val">{{ fmtNum(serumpH) }}</div>
               <div class="si-badge" :class="phStatusClass(serumpH)">{{ phLabel(serumpH) }}</div>
@@ -116,13 +114,11 @@
           <div class="sensor-hdr"><span class="sensor-acc" style="background:#00c8b0"></span>AT-LATEX SENSORS<span class="sensor-sub">บ่อ 2</span></div>
           <div class="sensor-grid">
             <div class="sensor-item">
-              <div class="si-tag">ORP SENSOR</div>
               <div class="si-name si-orp">ORP-L-2A</div>
               <div class="si-val">{{ fmtSigned(processORP) }}<span class="si-unit">mV</span></div>
               <div class="si-badge" :class="orpStatusClass(processORP)">{{ orpLabel(processORP) }}</div>
             </div>
             <div class="sensor-item">
-              <div class="si-tag">pH SENSOR</div>
               <div class="si-name si-ph">pH-L-2A</div>
               <div class="si-val">{{ fmtNum(processpH) }}</div>
               <div class="si-badge" :class="phStatusClass(processpH)">{{ phLabel(processpH) }}</div>
@@ -164,7 +160,7 @@ const CHART_OPT = (color1, color2, unit) => ({
   responsive: true, maintainAspectRatio: false, animation: false,
   plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
   scales: {
-    x: { ticks: { color: '#3a5070', font: { size: 9 }, maxTicksLimit: 6 }, grid: { color: 'rgba(255,255,255,.04)' } },
+    x: { ticks: { color: '#3a5070', font: { size: 8 }, maxTicksLimit: 24, maxRotation: 0, autoSkip: false }, grid: { color: 'rgba(255,255,255,.04)' } },
     y: { ticks: { color: '#3a5070', font: { size: 9 }, callback: v => `${v}${unit}` }, grid: { color: 'rgba(255,255,255,.06)' } },
   },
 });
@@ -214,6 +210,8 @@ export default {
   },
   methods: {
     fmtNum(v) { const n = parseFloat(v); return isNaN(n) ? '—' : n.toFixed(1); },
+    blowerRunning(s) { const v = String(s ?? '').toLowerCase(); return v === 'run' || v === 'on' || v === '1' || v === 'true'; },
+    blowerLabel(s) { const v = String(s ?? '').toLowerCase(); return (v === 'run' || v === 'on' || v === '1' || v === 'true') ? 'RUN' : 'STOP'; },
     fmtSigned(v) { const n = parseFloat(v); return isNaN(n) ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1); },
     orpStatusClass(v) {
       const n = parseFloat(v);
@@ -291,8 +289,8 @@ export default {
   padding: 14px 16px;
   font-family: 'Inter', 'Segoe UI', sans-serif;
   display: flex; flex-direction: column; gap: 10px;
-  min-height: calc(100vh - 56px - 37px);
-  overflow-y: auto;
+  height: calc(100vh - 56px - 37px);
+  overflow: hidden;
   background:
     radial-gradient(ellipse 60% 50% at 80% 20%, rgba(212,160,64,.04) 0%, transparent 60%),
     radial-gradient(ellipse 40% 40% at 10% 80%, rgba(0,212,255,.03) 0%, transparent 55%),
@@ -365,6 +363,7 @@ export default {
 .b-o    { background: rgba(255,120,32,.2); color: #ff7820; border: 1px solid rgba(255,120,32,.4); }
 .ov-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .dg { background: #b8e834; animation: pulseA 2s infinite; }
+.dy { background: #ffb800; }
 @keyframes pulseA { 0%,100%{opacity:1} 50%{opacity:.35} }
 
 /* ── SENSOR PANEL ── */
@@ -377,36 +376,37 @@ export default {
 }
 .sensor-hdr {
   display: flex; align-items: center; gap: 6px;
-  font-size: 14px; font-weight: 700; margin-bottom: 8px;
+  font-size: 21px; font-weight: 700; margin-bottom: 8px;
   color: rgba(255,255,255,.75);
 }
-.sensor-acc { width: 3px; height: 14px; border-radius: 2px; flex-shrink: 0; }
-.sensor-sub { font-size: 11px; color: rgba(255,255,255,.2); margin-left: auto; }
+.sensor-acc { width: 3px; height: 21px; border-radius: 2px; flex-shrink: 0; }
+.sensor-sub { font-size: 16px; color: rgba(255,255,255,.2); margin-left: auto; }
 .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .sensor-item {
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.06);
-  border-radius: 7px; padding: 7px 8px;
+  border-radius: 7px; padding: 10px 12px;
 }
-.si-tag { font-size: 10px; font-weight: 600; color: rgba(255,255,255,.2); letter-spacing: .06em; margin-bottom: 1px; }
-.si-name { font-family: 'JetBrains Mono',monospace; font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.si-tag { font-size: 15px; font-weight: 600; color: rgba(255,255,255,.2); letter-spacing: .06em; margin-bottom: 2px; }
+.si-name { font-family: 'JetBrains Mono',monospace; font-size: 20px; font-weight: 700; margin-bottom: 3px; }
 .si-orp { color: #e0956a; }
 .si-ph  { color: #6aaa88; }
-.si-val { font-family: 'JetBrains Mono',monospace; font-size: 22px; font-weight: 700; color: rgba(255,255,255,.8); line-height: 1.1; }
-.si-unit { font-size: 11px; font-weight: 400; color: rgba(255,255,255,.28); }
-.si-badge { font-family: 'JetBrains Mono',monospace; font-size: 11px; font-weight: 700; margin-top: 4px; letter-spacing: .04em; }
+.si-val { font-family: 'JetBrains Mono',monospace; font-size: 33px; font-weight: 700; color: rgba(255,255,255,.8); line-height: 1.1; }
+.si-unit { font-size: 17px; font-weight: 400; color: rgba(255,255,255,.28); }
+.si-badge { font-family: 'JetBrains Mono',monospace; font-size: 17px; font-weight: 700; margin-top: 6px; letter-spacing: .04em; }
 .ss-ok   { color: #b8e834; }
 .ss-low  { color: #ffb800; }
 .ss-warn { color: #ff5050; }
 .ss-off  { color: rgba(255,255,255,.2); }
 
 /* ── CHARTS ── */
-.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex-shrink: 0; height: 154px; }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; min-height: 0; }
 .chart-card {
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 10px; padding: 8px 12px;
   display: flex; flex-direction: column; gap: 4px;
+  min-height: 0;
 }
 .chart-hdr {
   font-size: 9.5px; font-weight: 600;
