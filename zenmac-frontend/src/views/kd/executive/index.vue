@@ -397,9 +397,7 @@ export default {
       const kwhTotal    = Math.round(d.reduce((a,r)=>a+(r.kwh||0),0));
       const avgORPSerum = Math.round(d.reduce((a,r)=>a+(r.orpSerum||0),0)/d.length);
       const avgORPLatex = Math.round(d.reduce((a,r)=>a+(r.orpLatex||0),0)/d.length);
-      const totalCost   = Math.round(kwhTotal*this.costRate);
       const eff         = totalFlow?((kwhTotal/totalFlow).toFixed(2)):'—';
-      const costD       = this.fmt0(Math.round(totalCost/d.length));
       const orpAvg      = Math.round((avgORPSerum+avgORPLatex)/2);
       return [
         {

@@ -655,7 +655,7 @@ export default {
       const {lbl, datasets:d1}=gen24h([3800,75,450],[320,8,45],[0,3,6]);
       const {datasets:d2}=gen24h([0,0,0],[10,2,8],[0,0,0]);   // TB-02 standby ≈ near zero
 
-      const dualOpts=(blowerColor)=>({
+      const dualOpts=()=>({
         responsive:true, maintainAspectRatio:false, animation:false,
         plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false,bodyFont:{family:'JetBrains Mono',size:11}} },
         scales:{
@@ -680,7 +680,7 @@ export default {
           {label:'Discharge Temp °C', data:d1[1], borderColor:t.cost,  backgroundColor:'transparent',     borderWidth:1.5, pointRadius:0, tension:0.35, yAxisID:'yRight'},
           {label:'Discharge Press',   data:d1[2], borderColor:t.orpS,  backgroundColor:'transparent',     borderWidth:1.2, pointRadius:0, tension:0.35, yAxisID:'yRight'},
         ]},
-        options:dualOpts(t.accent),
+        options:dualOpts(),
       });
       this._cTrend2=new Chart(this.$refs.chartTrend2, {
         type:'line',
@@ -689,7 +689,7 @@ export default {
           {label:'Discharge Temp °C', data:d2[1], borderColor:t.cost,  backgroundColor:'transparent',     borderWidth:1.5, pointRadius:0, tension:0.35, yAxisID:'yRight'},
           {label:'Discharge Press',   data:d2[2], borderColor:t.orpS,  backgroundColor:'transparent',     borderWidth:1.2, pointRadius:0, tension:0.35, yAxisID:'yRight'},
         ]},
-        options:dualOpts(t.kwh),
+        options:dualOpts(),
       });
     },
     buildSummaryCharts() {

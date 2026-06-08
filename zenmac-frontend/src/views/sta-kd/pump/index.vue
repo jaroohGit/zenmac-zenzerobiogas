@@ -149,10 +149,10 @@ export default {
 </script>
 
 <style scoped>
-.kd-page { display: flex; flex-direction: column; gap: 9px; }
+.kd-page { display: flex; flex-direction: column; gap: 9px; padding-top: 8px; }
 .kd-page-title-bar { display: flex; align-items: center; gap: 9px; }
 .kd-page-accent { width: 4px; height: 22px; border-radius: 2px; }
-.kd-page-title { font-family: var(--font-ui); font-weight: 700; font-size: 18px; letter-spacing: .1em; }
+.kd-page-title { font-family: var(--font-ui); font-weight: 700; font-size: 18px; letter-spacing: .1em; color: rgba(220,235,250,.82); }
 .kd-breadcrumb { font-family: var(--font-mono); font-size: 10px; color: var(--text3); margin-left: auto; }
 
 .kd-kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 9px; }
