@@ -28,7 +28,6 @@
           :style="`--ta:${th.accent}`"
         ></button>
       </div>
-      <span class="demo-tag">DEMO DATA</span>
     </div>
 
     <!-- ── KPI GRID 5 cards ── -->
@@ -133,7 +132,11 @@
 
 <script>
 import { Chart, registerables } from 'chart.js';
+import axios from 'axios';
 Chart.register(...registerables);
+
+const API = process.env.VUE_APP_KD_BACKEND
+  || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3323');
 
 // ── Theme definitions ──────────────────────────────────────────────
 const THEMES = {
@@ -471,10 +474,18 @@ export default {
     activeKpiCards()       { return this.viewMode==='annual' ? this.annualKpiCards      : this.kpiCards; },
     activeTreatPerfCards() { return this.viewMode==='annual' ? this.annualTreatPerfCards : this.treatPerfCards; },
   },
-  created() {
+  async created() {
     this._chartMain=null; this._chartORP=null; this._chartPerf=null; this._chartBlower=null;
-    this.monthData=genMonthData(0);
-    this.annualData=genAnnualData();
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    try {
+      const res = await axios.get(`${API}/api/kd/history/daily?month=${ym}`);
+      this.monthData = res.data && res.data.length ? res.data : genMonthData(0);
+    } catch { this.monthData = genMonthData(0); }
+    try {
+      const res = await axios.get(`${API}/api/kd/history/monthly?year=${now.getFullYear()}`);
+      this.annualData = res.data && res.data.length ? res.data : genAnnualData();
+    } catch { this.annualData = genAnnualData(); }
   },
   mounted()      { this.buildCharts(); },
   beforeUnmount(){ this.destroyCharts(); },
@@ -487,9 +498,14 @@ export default {
       [this._chartMain,this._chartORP,this._chartPerf,this._chartBlower].forEach(c=>c?.destroy());
     },
     switchTheme(key) { this.currentThemeKey=key; },
-    changeMonth(dir) {
+    async changeMonth(dir) {
       this.monthOffset=Math.max(0,Math.min(5,this.monthOffset+dir));
-      this.monthData=genMonthData(this.monthOffset);
+      const d = new Date(); d.setMonth(d.getMonth()-this.monthOffset);
+      const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      try {
+        const res = await axios.get(`${API}/api/kd/history/daily?month=${ym}`);
+        this.monthData = res.data && res.data.length ? res.data : genMonthData(this.monthOffset);
+      } catch { this.monthData = genMonthData(this.monthOffset); }
       [this._chartPerf,this._chartBlower,this._chartORP,this._chartMain].forEach(c=>c?.destroy());
       this.$nextTick(()=>this.buildMonthlyCharts());
     },
@@ -523,7 +539,15 @@ export default {
       const sX={...SCALE_X,ticks:{...SCALE_X.ticks,color:tk.tick}};
       return {tk,axisBdr,BASE,scY,sX};
     },
-    switchView(mode) { this.viewMode = mode; },
+    async switchView(mode) {
+      if (mode === 'annual') {
+        try {
+          const res = await axios.get(`${API}/api/kd/history/monthly?year=${new Date().getFullYear()}`);
+          if (res.data && res.data.length) this.annualData = res.data;
+        } catch { /* keep existing annualData */ }
+      }
+      this.viewMode = mode;
+    },
     getAnnualChartData() {
       const d=this.annualData, rate=parseFloat(this.costRate)||4.5;
       return {

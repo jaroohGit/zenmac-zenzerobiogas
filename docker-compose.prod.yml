@@ -27,10 +27,17 @@ services:
       - HOST=0.0.0.0
       - PORT=3323
       - MQTT_BROKER_URL=mqtt://host.docker.internal:1884
+      - DB_PATH=/data/kd_history.db
+    volumes:
+      - kd-db-data:/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
       - zenmac-net
+
+volumes:
+  kd-db-data:
+    name: kd-db-data
 
 networks:
   zenmac-net:

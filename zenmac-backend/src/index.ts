@@ -4,6 +4,9 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import mqtt, { MqttClient } from "mqtt";
+import Database from "better-sqlite3";
+import fs from "fs";
+import path from "path";
 
 type JsonMap = Record<string, any>;
 
@@ -12,6 +15,27 @@ type MqttStatus = {
   broker: string;
   reconnecting: boolean;
 };
+
+// ── SQLite database ────────────────────────────────────────────────
+const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "kd_history.db");
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+const db = new Database(DB_PATH);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS daily_summary (
+    date          TEXT PRIMARY KEY,
+    serum_flow    REAL DEFAULT 0,
+    latex_flow    REAL DEFAULT 0,
+    total_flow    REAL DEFAULT 0,
+    tb1_kwh       REAL DEFAULT 0,
+    tb2_kwh       REAL DEFAULT 0,
+    total_kwh     REAL DEFAULT 0,
+    tb1_run_hours REAL DEFAULT 0,
+    tb2_run_hours REAL DEFAULT 0,
+    orp_serum_avg REAL DEFAULT 0,
+    orp_latex_avg REAL DEFAULT 0,
+    saved_at      TEXT
+  )
+`);
 
 const PORT = Number.parseInt(process.env.PORT || "3323", 10);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -85,6 +109,12 @@ const blowerAccum: { tb1: BlowerAccum; tb2: BlowerAccum } = {
 };
 let todayDate = new Date().toDateString();
 
+// ── ORP running average (reset at midnight with daily save) ─────────
+const orpAccum = {
+  serum: { sum: 0, count: 0 },
+  latex: { sum: 0, count: 0 },
+};
+
 function val(v: unknown, fallback = 0): number {
   if (Array.isArray(v)) return v[0] != null ? Number(v[0]) : fallback;
   return v != null ? Number(v) : fallback;
@@ -112,9 +142,42 @@ function zeroHistory() {
   };
 }
 
+function saveDailySummary(): void {
+  try {
+    const d5 = mqttData.kd5 || {};
+    const serumFlow  = val(d5["Serum Flow M3_Day_real"]);
+    const latexFlow  = val(d5["Process Flow M3_Day_real"]);
+    const tb1kwh     = +blowerAccum.tb1.kwhToday.toFixed(2);
+    const tb2kwh     = +blowerAccum.tb2.kwhToday.toFixed(2);
+    const orpSerum   = orpAccum.serum.count ? +(orpAccum.serum.sum / orpAccum.serum.count).toFixed(1) : 0;
+    const orpLatex   = orpAccum.latex.count ? +(orpAccum.latex.sum / orpAccum.latex.count).toFixed(1) : 0;
+    const dateStr    = todayDate; // save the date being closed out
+
+    // Convert toDateString() → YYYY-MM-DD
+    const d = new Date(dateStr);
+    const isoDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+    db.prepare(`
+      INSERT OR REPLACE INTO daily_summary
+        (date, serum_flow, latex_flow, total_flow, tb1_kwh, tb2_kwh, total_kwh,
+         tb1_run_hours, tb2_run_hours, orp_serum_avg, orp_latex_avg, saved_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      isoDate, serumFlow, latexFlow, +(serumFlow+latexFlow).toFixed(1),
+      tb1kwh, tb2kwh, +(tb1kwh+tb2kwh).toFixed(2),
+      getRunHours('tb1'), getRunHours('tb2'),
+      orpSerum, orpLatex, new Date().toISOString()
+    );
+    console.log(`[db] daily summary saved: ${isoDate}  flow=${(serumFlow+latexFlow).toFixed(0)} m³  kwh=${(tb1kwh+tb2kwh).toFixed(1)}`);
+  } catch (err: any) {
+    console.error('[db] save daily summary error:', err.message);
+  }
+}
+
 function checkMidnightReset(): void {
   const now = new Date().toDateString();
   if (now !== todayDate) {
+    saveDailySummary();
     todayDate = now;
     const ts = Date.now();
     for (const b of [blowerAccum.tb1, blowerAccum.tb2]) {
@@ -122,6 +185,8 @@ function checkMidnightReset(): void {
       b.runSeconds = 0;
       if (b.lastStatus === 'RUN') b.runStartTs = ts;
     }
+    orpAccum.serum = { sum: 0, count: 0 };
+    orpAccum.latex = { sum: 0, count: 0 };
   }
 }
 
@@ -340,6 +405,71 @@ app.delete("/api/devices/:id", (req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+// GET /api/kd/history/daily?month=2026-06
+app.get("/api/kd/history/daily", (req: Request, res: Response) => {
+  const month = String(req.query.month || "");
+  if (!/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ error: "invalid month, use YYYY-MM" });
+  const rows = db.prepare(
+    "SELECT * FROM daily_summary WHERE date LIKE ? ORDER BY date ASC"
+  ).all(`${month}-%`) as any[];
+  const data = rows.map(r => ({
+    day:       parseInt(r.date.split("-")[2]),
+    serum:     r.serum_flow,
+    latex:     r.latex_flow,
+    flow:      r.total_flow,
+    kwh:       r.total_kwh,
+    kwh1:      r.tb1_kwh,
+    kwh2:      r.tb2_kwh,
+    orp_serum: r.orp_serum_avg,
+    orp_latex: r.orp_latex_avg,
+  }));
+  res.json(data);
+});
+
+// GET /api/kd/history/monthly?year=2026
+app.get("/api/kd/history/monthly", (req: Request, res: Response) => {
+  const year = String(req.query.year || new Date().getFullYear());
+  if (!/^\d{4}$/.test(year)) return res.status(400).json({ error: "invalid year" });
+  const rows = db.prepare(`
+    SELECT strftime('%Y-%m', date) as month,
+      SUM(serum_flow) as serum, SUM(latex_flow) as latex, SUM(total_flow) as flow,
+      SUM(tb1_kwh) as kwh1, SUM(tb2_kwh) as kwh2, SUM(total_kwh) as kwh,
+      AVG(orp_serum_avg) as orp_serum, AVG(orp_latex_avg) as orp_latex
+    FROM daily_summary WHERE date LIKE ? GROUP BY month ORDER BY month ASC
+  `).all(`${year}-%`) as any[];
+  const labels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const now = new Date(), curY = now.getFullYear(), curM = now.getMonth();
+  const data = labels.map((label, idx) => {
+    const m   = String(idx+1).padStart(2,"0");
+    const key = `${year}-${m}`;
+    const r   = rows.find(x => x.month === key);
+    if (!r) return { label, month:idx+1, serum:null, latex:null, flow:null, kwh:null, kwh1:null, kwh2:null, orp_serum:null, orp_latex:null };
+    return {
+      label, month: idx+1,
+      serum: +r.serum.toFixed(0), latex: +r.latex.toFixed(0), flow: +r.flow.toFixed(0),
+      kwh:  +r.kwh.toFixed(0),  kwh1: +r.kwh1.toFixed(0),  kwh2: +r.kwh2.toFixed(0),
+      orp_serum: +r.orp_serum.toFixed(0), orp_latex: +r.orp_latex.toFixed(0),
+    };
+  });
+  // append current day-to-date for ongoing months
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  if (String(now.getFullYear()) === year && !rows.find(x => x.month === `${year}-${String(curM+1).padStart(2,'0')}`)) {
+    const d5 = mqttData.kd5 || {};
+    data[curM] = {
+      label: labels[curM], month: curM+1,
+      serum: Math.round(val(d5["Serum Flow M3_Day_real"])),
+      latex: Math.round(val(d5["Process Flow M3_Day_real"])),
+      flow:  Math.round(val(d5["Process+Serum Flow M3_Day_real"])),
+      kwh:   +(blowerAccum.tb1.kwhToday+blowerAccum.tb2.kwhToday).toFixed(0),
+      kwh1:  +blowerAccum.tb1.kwhToday.toFixed(0),
+      kwh2:  +blowerAccum.tb2.kwhToday.toFixed(0),
+      orp_serum: orpAccum.serum.count ? Math.round(orpAccum.serum.sum/orpAccum.serum.count) : 0,
+      orp_latex: orpAccum.latex.count ? Math.round(orpAccum.latex.sum/orpAccum.latex.count) : 0,
+    };
+  }
+  res.json(data);
+});
+
 app.post("/api/cmd/blower/:n", (req: Request, res: Response) => {
   const payload = {
     type: "blower",
@@ -460,6 +590,11 @@ mqttClient.on("message", (topic: string, message: Buffer) => {
     io.emit("kd:snapshot", mqttData);
 
     const live = mapMqttToLive();
+
+    // Accumulate ORP for daily average
+    if (live.serumSensor?.orp > 0)   { orpAccum.serum.sum += live.serumSensor.orp;   orpAccum.serum.count++; }
+    if (live.processSensor?.orp > 0) { orpAccum.latex.sum += live.processSensor.orp; orpAccum.latex.count++; }
+
     io.emit("live", live);
     io.emit("rawmqtt", mqttData);
   } catch (err: any) {

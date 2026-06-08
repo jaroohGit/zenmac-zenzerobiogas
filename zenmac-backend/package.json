@@ -9,6 +9,8 @@
     "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^12.10.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "mqtt": "^5.13.1",
