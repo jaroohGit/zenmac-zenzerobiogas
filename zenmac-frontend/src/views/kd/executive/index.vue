@@ -138,27 +138,6 @@
 
     </div>
 
-    <!-- ── TREATMENT PERFORMANCE STRIP ── -->
-    <div class="tp-strip">
-      <div class="tp-hdr">
-        <span class="tp-title">TREATMENT PERFORMANCE</span>
-        <span class="tp-sub">{{ viewMode==='annual'?'สรุปรายปี':'สรุปรายเดือน' }} · ประสิทธิภาพการบำบัด Serum &amp; Latex</span>
-      </div>
-      <div class="tp-cards">
-        <div class="tp-card" v-for="k in activeTreatPerfCards" :key="k.tag" :style="`--c:${k.color}`">
-          <div class="kpi-tag">{{ k.tag }}</div>
-          <div class="kpi-big-row">
-            <span class="tp-big" :style="`color:${k.color}`">{{ k.big }}</span>
-            <span class="tp-unit" :style="`color:${k.color}`">{{ k.unit }}</span>
-            <span class="tp-status" v-if="k.status" :style="`color:${k.color}`">{{ k.status }}</span>
-          </div>
-          <div class="tp-meter" v-if="k.meter!==undefined">
-            <div class="tp-meter-fill" :style="`width:${k.meter}%;background:${k.meterColor}`"></div>
-          </div>
-          <div class="kpi-foot">{{ k.foot }}</div>
-        </div>
-      </div>
-    </div>
 
   </div>
 </template>
@@ -836,32 +815,6 @@ export default {
 .chart-wrap { flex:1; min-height:0; position:relative; }
 .chart-wrap canvas { position:absolute; inset:0; }
 
-/* ── Treatment Performance Strip ── */
-.tp-strip {
-  flex-shrink:0;
-  background:var(--ex-card-bg);
-  border:1px solid var(--ex-card-bdr);
-  border-radius:7px;
-  padding:7px 14px;
-  display:flex; flex-direction:column; gap:5px;
-}
-.tp-hdr   { display:flex; align-items:center; gap:8px; }
-.tp-title { font-size:9px; font-weight:700; letter-spacing:.1em; color:var(--ex-text-sub); text-transform:uppercase; }
-.tp-sub   { font-size:8px; color:var(--ex-text-sub); opacity:.6; }
-.tp-cards {
-  display:grid; grid-template-columns:repeat(5,1fr);
-  gap:1px; background:var(--ex-card-bdr); border-radius:5px; overflow:hidden;
-}
-.tp-card {
-  padding:7px 10px; display:flex; flex-direction:column; gap:3px;
-  background:linear-gradient(110deg,color-mix(in srgb,var(--c) 10%,var(--ex-card-bg)) 0%,var(--ex-card-bg) 60%);
-  border-left:2px solid var(--c);
-}
-.tp-big    { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; line-height:1; }
-.tp-unit   { font-size:10px; font-weight:600; margin-left:3px; }
-.tp-status { font-size:8px; font-weight:700; letter-spacing:.07em; margin-left:auto; padding:1px 5px; border-radius:3px; background:color-mix(in srgb,var(--c) 14%,transparent); }
-.tp-meter  { height:3px; background:var(--ex-card-bdr); border-radius:2px; overflow:hidden; margin:2px 0; }
-.tp-meter-fill { height:100%; border-radius:2px; transition:width .6s ease; }
 
 /* ── View toggle ── */
 .view-toggle { display:flex; gap:2px; background:var(--ex-mn-bg); border:1px solid var(--ex-mn-bdr); border-radius:6px; padding:2px; }
