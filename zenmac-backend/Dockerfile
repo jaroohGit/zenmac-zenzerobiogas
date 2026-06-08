@@ -1,6 +1,8 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
+RUN apk add --no-cache python3 make g++
+
 COPY package.json ./
 RUN npm install
 
@@ -10,6 +12,8 @@ RUN npm run build
 
 FROM node:20-alpine AS runtime
 WORKDIR /app
+
+RUN apk add --no-cache python3 make g++
 
 COPY package.json ./
 RUN npm install --omit=dev
