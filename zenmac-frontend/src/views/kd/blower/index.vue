@@ -308,6 +308,49 @@
         </div>
         <div class="bw-sum-wrap"><canvas ref="chartSumEnergy"></canvas></div>
       </div>
+
+      <!-- Temperature chart -->
+      <div class="bw-chart-card">
+        <div class="bw-ch-hdr">
+          <span class="bw-ch-dot" :style="`background:${t.cost}`"></span>
+          TEMPERATURE — Suction vs Discharge (°C)
+          <span class="bw-legend ml">
+            <span class="bw-ls" :style="`background:${t.accent}88`"></span>TB-01 Suct
+            <span class="bw-ls" :style="`background:${t.accent}`"></span>TB-01 Disch
+            <span class="bw-ls" :style="`background:${t.kwh}88`"></span>TB-02 Suct
+            <span class="bw-ls" :style="`background:${t.kwh}`"></span>TB-02 Disch
+          </span>
+        </div>
+        <div class="bw-sum-wrap"><canvas ref="chartSumTemp"></canvas></div>
+      </div>
+
+      <!-- Pressure chart (dual y-axis) -->
+      <div class="bw-chart-card">
+        <div class="bw-ch-hdr">
+          <span class="bw-ch-dot" :style="`background:${t.orpS}`"></span>
+          PRESSURE — Suction (mmAq) / Discharge (mmAq)
+          <span class="bw-legend ml">
+            <span class="bw-ls bw-ls-dash" :style="`background:${t.accent}`"></span>TB-01 Disch
+            <span class="bw-ls bw-ls-dash" :style="`background:${t.kwh}`"></span>TB-02 Disch
+            <span class="bw-ls" :style="`background:${t.orpL}`"></span>Suction
+          </span>
+        </div>
+        <div class="bw-sum-wrap"><canvas ref="chartSumPress"></canvas></div>
+      </div>
+
+      <!-- Pressure ratio / efficiency -->
+      <div class="bw-chart-card">
+        <div class="bw-ch-hdr">
+          <span class="bw-ch-dot" :style="`background:${t.hOk}`"></span>
+          PRESSURE RATIO — Discharge ÷ |Suction| (ประสิทธิภาพ)
+          <span class="bw-legend ml">
+            <span class="bw-ls" :style="`background:${t.accent}`"></span>TB-01
+            <span class="bw-ls" :style="`background:${t.kwh}`"></span>TB-02
+          </span>
+        </div>
+        <div class="bw-sum-wrap"><canvas ref="chartSumRatio"></canvas></div>
+      </div>
+
     </div>
 
   </div>
@@ -394,14 +437,30 @@ function gen24h(bases, amps, shifts) {
 function genDailyData(offset=0) {
   const now=new Date(), todayHr=offset===0?now.getHours():23;
   return Array.from({length:24},(_,h)=>{
-    if(h>todayHr) return {label:`${String(h).padStart(2,'0')}:00`,tb1pow:null,tb2pow:null,tb1flow:null,tb2flow:null};
+    if(h>todayHr) return {
+      label:`${String(h).padStart(2,'0')}:00`,
+      tb1pow:null,tb2pow:null,tb1flow:null,tb2flow:null,
+      tb1suctTemp:null,tb1dischTemp:null,tb2suctTemp:null,tb2dischTemp:null,
+      tb1suctPres:null,tb1dischPres:null,tb2suctPres:null,tb2dischPres:null,
+    };
     const on=h>=6&&h<=22;
+    const r=()=>Math.random();
     return {
       label:`${String(h).padStart(2,'0')}:00`,
-      tb1pow: on?Math.round((74+Math.random()*26)*10)/10:Math.round(Math.random()*6*10)/10,
-      tb2pow: on?Math.round((66+Math.random()*24)*10)/10:Math.round(Math.random()*5*10)/10,
-      tb1flow:on?Math.round((3700+Math.random()*600)):Math.round(Math.random()*300),
-      tb2flow:on?Math.round((3400+Math.random()*550)):Math.round(Math.random()*250),
+      tb1pow:    on?+(74+r()*26).toFixed(1):+(r()*6).toFixed(1),
+      tb2pow:    on?+(66+r()*24).toFixed(1):+(r()*5).toFixed(1),
+      tb1flow:   on?Math.round(3700+r()*600):Math.round(r()*300),
+      tb2flow:   on?Math.round(3400+r()*550):Math.round(r()*250),
+      // Temp (°C)
+      tb1suctTemp:  on?+(30+r()*8).toFixed(1):+(25+r()*5).toFixed(1),
+      tb1dischTemp: on?+(72+r()*13).toFixed(1):+(28+r()*4).toFixed(1),
+      tb2suctTemp:  on?+(29+r()*9).toFixed(1):+(24+r()*5).toFixed(1),
+      tb2dischTemp: on?+(68+r()*14).toFixed(1):+(27+r()*4).toFixed(1),
+      // Pressure (mmAq — negative=suction, positive=discharge)
+      tb1suctPres:  on?+(-12-r()*8).toFixed(1):+(r()*(-2)).toFixed(1),
+      tb1dischPres: on?+(460+r()*70).toFixed(1):+(r()*10).toFixed(1),
+      tb2suctPres:  on?+(-10-r()*7).toFixed(1):+(r()*(-2)).toFixed(1),
+      tb2dischPres: on?+(440+r()*65).toFixed(1):+(r()*10).toFixed(1),
     };
   });
 }
@@ -411,16 +470,29 @@ function genMonthlyData(offset=0) {
   const dim=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();
   const today=offset===0?now.getDate():dim;
   return Array.from({length:dim},(_,i)=>{
-    const d=i+1;
-    if(d>today) return {label:`${d}`,tb1kwh:null,tb2kwh:null,tb1peakPow:null,tb2peakPow:null,tb1flow:null,tb2flow:null};
+    const d=i+1, r=()=>Math.random();
+    if(d>today) return {
+      label:`${d}`,
+      tb1kwh:null,tb2kwh:null,tb1peakPow:null,tb2peakPow:null,tb1flow:null,tb2flow:null,
+      tb1suctTemp:null,tb1dischTemp:null,tb2suctTemp:null,tb2dischTemp:null,
+      tb1suctPres:null,tb1dischPres:null,tb2suctPres:null,tb2dischPres:null,
+    };
     return {
       label:`${d}`,
-      tb1kwh:Math.round(530+Math.random()*420),
-      tb2kwh:Math.round(475+Math.random()*400),
-      tb1peakPow:Math.round((82+Math.random()*28)*10)/10,
-      tb2peakPow:Math.round((74+Math.random()*26)*10)/10,
-      tb1flow:Math.round(3700+Math.random()*600),
-      tb2flow:Math.round(3400+Math.random()*550),
+      tb1kwh:      Math.round(530+r()*420),
+      tb2kwh:      Math.round(475+r()*400),
+      tb1peakPow:  +(82+r()*28).toFixed(1),
+      tb2peakPow:  +(74+r()*26).toFixed(1),
+      tb1flow:     Math.round(3700+r()*600),
+      tb2flow:     Math.round(3400+r()*550),
+      tb1suctTemp:  +(30+r()*8).toFixed(1),
+      tb1dischTemp: +(73+r()*12).toFixed(1),
+      tb2suctTemp:  +(29+r()*9).toFixed(1),
+      tb2dischTemp: +(69+r()*13).toFixed(1),
+      tb1suctPres:  +(-12-r()*7).toFixed(1),
+      tb1dischPres: +(460+r()*68).toFixed(1),
+      tb2suctPres:  +(-10-r()*6).toFixed(1),
+      tb2dischPres: +(442+r()*62).toFixed(1),
     };
   });
 }
@@ -532,6 +604,7 @@ export default {
   created() {
     this._cTrend1=null; this._cTrend2=null;
     this._cSumPow=null; this._cSumFlow=null; this._cSumEnergy=null;
+    this._cSumTemp=null; this._cSumPress=null; this._cSumRatio=null;
     this.dailyData=genDailyData(0);
     this.monthlyData=genMonthlyData(0);
   },
@@ -556,10 +629,11 @@ export default {
       this.$store.dispatch('staKd/cmdBlower', { n, cmd, speed_pct });
     },
     destroyCharts() {
-      [this._cTrend1,this._cTrend2,this._cSumPow,this._cSumFlow,this._cSumEnergy]
-        .forEach(c=>c?.destroy());
+      [this._cTrend1,this._cTrend2,this._cSumPow,this._cSumFlow,this._cSumEnergy,
+       this._cSumTemp,this._cSumPress,this._cSumRatio].forEach(c=>c?.destroy());
       this._cTrend1=this._cTrend2=null;
       this._cSumPow=this._cSumFlow=this._cSumEnergy=null;
+      this._cSumTemp=this._cSumPress=this._cSumRatio=null;
     },
     _baseOpts() {
       const t=this.t;
@@ -645,12 +719,55 @@ export default {
           {label:'TB-02 kWh',data:isD?d.map(r=>r.tb2pow):d.map(r=>r.tb2kwh),backgroundColor:h2r(t.kwh,.75),  borderColor:t.kwh,  borderWidth:0,stack:'bl'},
         ]}, options:stackOpts,
       });
+
+      // ── Temperature chart (4 lines, single y-axis °C) ──
+      this._cSumTemp=new Chart(this.$refs.chartSumTemp,{
+        type:'line', data:{ labels, datasets:[
+          {label:'TB-01 Suct Temp',  data:d.map(r=>r.tb1suctTemp),  borderColor:h2r(t.accent,.55), borderDash:[4,3], backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:0.3},
+          {label:'TB-01 Disch Temp', data:d.map(r=>r.tb1dischTemp), borderColor:t.accent,          backgroundColor:h2r(t.accent,.06), borderWidth:2,   pointRadius:0, tension:0.3, fill:true},
+          {label:'TB-02 Suct Temp',  data:d.map(r=>r.tb2suctTemp),  borderColor:h2r(t.kwh,.55),   borderDash:[4,3], backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:0.3},
+          {label:'TB-02 Disch Temp', data:d.map(r=>r.tb2dischTemp), borderColor:t.kwh,            backgroundColor:h2r(t.kwh,.06),   borderWidth:2,   pointRadius:0, tension:0.3, fill:true},
+        ]}, options:{...opts, scales:{
+          x:{...opts.scales.x},
+          y:{...opts.scales.y, title:{display:true,text:'°C',color:t.cost,font:{size:8}}},
+        }},
+      });
+
+      // ── Pressure chart (dual y-axis: Discharge left, Suction right) ──
+      this._cSumPress=new Chart(this.$refs.chartSumPress,{
+        type:'line', data:{ labels, datasets:[
+          {label:'TB-01 Disch',data:d.map(r=>r.tb1dischPres),borderColor:t.accent,backgroundColor:h2r(t.accent,.07),borderWidth:2,  pointRadius:0,tension:0.3,fill:true, yAxisID:'yDisch'},
+          {label:'TB-02 Disch',data:d.map(r=>r.tb2dischPres),borderColor:t.kwh,  backgroundColor:h2r(t.kwh,.07),  borderWidth:2,  pointRadius:0,tension:0.3,fill:true, yAxisID:'yDisch'},
+          {label:'TB-01 Suct', data:d.map(r=>r.tb1suctPres), borderColor:t.orpL, backgroundColor:'transparent',    borderWidth:1.5,pointRadius:0,tension:0.3,borderDash:[4,3], yAxisID:'ySuct'},
+          {label:'TB-02 Suct', data:d.map(r=>r.tb2suctPres), borderColor:h2r(t.orpL,.6),backgroundColor:'transparent',borderWidth:1.2,pointRadius:0,tension:0.3,borderDash:[4,3], yAxisID:'ySuct'},
+        ]}, options:{
+          responsive:true, maintainAspectRatio:false, animation:false,
+          plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,bodyFont:{family:'JetBrains Mono',size:11}}},
+          scales:{
+            x:{ticks:{color:t.tick,font:{size:9},maxRotation:0},grid:{color:h2r(t.tick,.16)},border:{display:false}},
+            yDisch:{type:'linear',position:'left',  ticks:{color:t.accent,font:{size:9}},grid:{color:h2r(t.tick,.16)},border:{display:false},title:{display:true,text:'Disch mmAq',color:t.accent,font:{size:8}}},
+            ySuct: {type:'linear',position:'right', ticks:{color:t.orpL, font:{size:9}},grid:{display:false},          border:{display:false},title:{display:true,text:'Suct mmAq', color:t.orpL, font:{size:8}}},
+          },
+        },
+      });
+
+      // ── Pressure Ratio chart: Disch / |Suct| ──
+      const ratio=(disch,suct)=>(disch!==null&&suct!==null&&suct!==0) ? +(disch/Math.abs(suct)).toFixed(1) : null;
+      this._cSumRatio=new Chart(this.$refs.chartSumRatio,{
+        type:'line', data:{ labels, datasets:[
+          {label:'TB-01 Ratio',data:d.map(r=>ratio(r.tb1dischPres,r.tb1suctPres)),borderColor:t.accent,backgroundColor:h2r(t.accent,.1),borderWidth:2,pointRadius:0,tension:0.3,fill:true},
+          {label:'TB-02 Ratio',data:d.map(r=>ratio(r.tb2dischPres,r.tb2suctPres)),borderColor:t.kwh,  backgroundColor:h2r(t.kwh,.1),  borderWidth:2,pointRadius:0,tension:0.3,fill:true},
+        ]}, options:{...opts, scales:{
+          x:{...opts.scales.x},
+          y:{...opts.scales.y, title:{display:true,text:'Disch/|Suct|',color:t.hOk,font:{size:8}}},
+        }},
+      });
     },
     setSummaryMode(mode) {
       if(this.summaryMode===mode) return;
       this.summaryMode=mode; this.summaryOffset=0;
-      [this._cSumPow,this._cSumFlow,this._cSumEnergy].forEach(c=>c?.destroy());
-      this._cSumPow=this._cSumFlow=this._cSumEnergy=null;
+      [this._cSumPow,this._cSumFlow,this._cSumEnergy,this._cSumTemp,this._cSumPress,this._cSumRatio].forEach(c=>c?.destroy());
+      this._cSumPow=this._cSumFlow=this._cSumEnergy=this._cSumTemp=this._cSumPress=this._cSumRatio=null;
       this.$nextTick(()=>this.buildSummaryCharts());
     },
     changeOffset(dir) {
@@ -658,8 +775,8 @@ export default {
       this.summaryOffset=Math.max(0,Math.min(max,this.summaryOffset+dir));
       if(this.summaryMode==='daily') this.dailyData=genDailyData(this.summaryOffset);
       else                           this.monthlyData=genMonthlyData(this.summaryOffset);
-      [this._cSumPow,this._cSumFlow,this._cSumEnergy].forEach(c=>c?.destroy());
-      this._cSumPow=this._cSumFlow=this._cSumEnergy=null;
+      [this._cSumPow,this._cSumFlow,this._cSumEnergy,this._cSumTemp,this._cSumPress,this._cSumRatio].forEach(c=>c?.destroy());
+      this._cSumPow=this._cSumFlow=this._cSumEnergy=this._cSumTemp=this._cSumPress=this._cSumRatio=null;
       this.$nextTick(()=>this.buildSummaryCharts());
     },
   },
@@ -751,6 +868,7 @@ export default {
   background:var(--ex-card-bg); border:1px solid var(--ex-card-bdr);
   border-left:3px solid var(--bc); border-radius:8px;
   padding:14px; display:flex; flex-direction:column; gap:12px;
+  filter:brightness(1.2);
 }
 .bw-ctrl-title {
   display:flex; align-items:center; gap:8px;
@@ -820,8 +938,9 @@ export default {
   font-size:9px; font-weight:700; color:var(--ex-label); letter-spacing:.06em;
 }
 .bw-ch-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-.bw-sum-wrap { min-height:175px; position:relative; }
+.bw-sum-wrap { min-height:155px; position:relative; }
 .bw-legend { display:flex; align-items:center; gap:6px; font-weight:500; color:var(--ex-text-sub); }
 .bw-ls { display:inline-block; width:18px; height:2px; border-radius:1px; vertical-align:middle; }
+.bw-ls-dash { background-image:repeating-linear-gradient(90deg,currentColor 0,currentColor 4px,transparent 4px,transparent 7px); background-color:transparent !important; }
 .ml { margin-left:auto; }
 </style>
