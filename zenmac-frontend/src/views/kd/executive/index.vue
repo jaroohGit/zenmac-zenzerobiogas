@@ -48,18 +48,51 @@
     <!-- ── MONTHLY BODY: left KPI panel + charts ── -->
     <div class="monthly-body">
 
-      <!-- Left: vertical KPI summary -->
+      <!-- Left: hero card -->
       <div class="monthly-kpi-col">
-        <div class="mkpi-card" v-for="k in monthlyKpiCards" :key="k.tag" :style="`--c:${k.color};flex:${k.flex||1}`">
-          <div class="kpi-tag">{{ k.tag }}</div>
-          <div class="kpi-big-row">
-            <span class="kpi-big" :style="`color:${k.color}`">{{ k.big }}</span>
-            <span class="kpi-unit-b" :style="`color:${k.color}`">{{ k.unit }}</span>
+        <div class="hero-card" v-if="heroCard" :style="`--c:${heroCard.eff.color}`">
+          <div class="hero-tag">TREATMENT EFF</div>
+
+          <!-- Main efficiency number -->
+          <div class="hero-main-row">
+            <span class="hero-big" :style="`color:${heroCard.eff.color}`">{{ heroCard.eff.big }}</span>
+            <span class="hero-unit" :style="`color:${heroCard.eff.color}`">m³/kWh</span>
+            <span class="hero-badge" :style="`color:${heroCard.eff.color};border-color:${heroCard.eff.color}30;background:${heroCard.eff.color}14`">{{ heroCard.eff.status }}</span>
           </div>
-          <div class="kpi-chips" v-if="k.chips && k.chips.length">
-            <span class="kpi-chip" v-for="c in k.chips" :key="c.label" :style="`color:${c.color}`">{{ c.label }}: {{ c.val }}</span>
+          <div class="hero-meter">
+            <div class="hero-meter-fill" :style="`width:${heroCard.eff.meter}%;background:${heroCard.eff.meterColor}`"></div>
           </div>
-          <div class="kpi-foot" v-if="k.foot">{{ k.foot }}</div>
+          <div class="hero-sub">{{ heroCard.eff.meter }}% of target 2.0 m³/kWh</div>
+
+          <!-- 2×2 detail grid -->
+          <div class="hero-grid">
+            <div class="hero-sec">
+              <div class="hero-sec-lbl">FLOW</div>
+              <div class="hero-sec-val" :style="`color:${t.accent}`">{{ fmt0(heroCard.flow) }}<span class="hero-sec-u">m³</span></div>
+              <div class="hero-sec-chip"><span :style="`color:${t.serum}`">Serum</span> {{ fmt0(heroCard.serum) }}</div>
+              <div class="hero-sec-chip"><span :style="`color:${t.latex}`">Latex</span> {{ fmt0(heroCard.latex) }}</div>
+            </div>
+            <div class="hero-sec">
+              <div class="hero-sec-lbl">ENERGY</div>
+              <div class="hero-sec-val" :style="`color:${t.kwh}`">{{ fmt0(heroCard.kwh) }}<span class="hero-sec-u">kWh</span></div>
+              <div class="hero-sec-chip"><span :style="`color:${t.kwh}`">TB-01</span> {{ fmt0(heroCard.kwh1) }}</div>
+              <div class="hero-sec-chip"><span :style="`color:${t.cost}`">TB-02</span> {{ fmt0(heroCard.kwh2) }}</div>
+            </div>
+            <div class="hero-sec">
+              <div class="hero-sec-lbl">AERATION COST</div>
+              <div class="hero-sec-val" :style="`color:${heroCard.cost.color}`">{{ heroCard.cost.big }}<span class="hero-sec-u">฿/m³</span></div>
+              <div class="hero-sec-chip">Est: <span :style="`color:${t.cost}`">{{ fmt0(heroCard.estCost) }} ฿</span></div>
+              <div class="hero-sec-chip" :style="`color:${t.hWarn}`">Rate {{ costRate }} ฿/kWh</div>
+            </div>
+            <div class="hero-sec">
+              <div class="hero-sec-lbl">ORP AVERAGE</div>
+              <div class="hero-sec-val" :style="`color:${t.orpS}`">{{ heroCard.orpS }}<span class="hero-sec-u">mV</span></div>
+              <div class="hero-sec-chip"><span :style="`color:${t.orpS}`">Serum</span> {{ heroCard.orpS }} mV</div>
+              <div class="hero-sec-chip"><span :style="`color:${t.orpL}`">Latex</span> {{ heroCard.orpL }} mV</div>
+            </div>
+          </div>
+
+          <div class="hero-foot">Flow ÷ Energy — Higher is Better · Target ≥ 2.0 m³/kWh</div>
         </div>
       </div>
 
@@ -343,7 +376,7 @@ export default {
           ],
         },
         {
-          tag:'PERFORMANCE', big:s.efficiency, unit:'m³/kWh', color:t.perf,
+          tag:'TREATMENT EFF', big:s.efficiency, unit:'m³/kWh', color:t.perf,
           chips:[],
           foot:'Flow ÷ Energy — Higher is Better',
         },
@@ -443,7 +476,7 @@ export default {
       return [
         { tag:'ANNUAL FLOW',       big:this.fmt0(s.totalFlow),   unit:'m³',   color:t.accent, chips:[{label:'Serum',val:this.fmt0(s.serumTotal),color:t.serum},{label:'Latex',val:this.fmt0(s.latexTotal),color:t.latex}] },
         { tag:'ANNUAL ENERGY',     big:this.fmt0(s.kwhTotal),    unit:'kWh',  color:t.kwh,    chips:[{label:'TB-01',val:this.fmt0(Math.round(s.kwhTotal*.52)),color:t.kwh},{label:'TB-02',val:this.fmt0(Math.round(s.kwhTotal*.48)),color:t.cost}] },
-        { tag:'AVG EFFICIENCY',    big:eff,                       unit:'m³/kWh',color:t.perf,  chips:[], foot:'Annual Flow ÷ Energy' },
+        { tag:'TREATMENT EFF',     big:eff,                       unit:'m³/kWh',color:t.perf,  chips:[], foot:'Annual Flow ÷ Energy' },
         { tag:'EST. ANNUAL COST',  big:this.fmt0(s.totalCost),   unit:'฿',    color:t.cost,   chips:[], foot:`${s.months} months · ${this.costRate} ฿/kWh` },
         { tag:'ORP ACHIEVEMENT',   big:orpAch,                   unit:'%',    color:orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit, chips:[{label:'Serum avg',val:s.avgOrpS+' mV',color:t.orpS},{label:'Latex avg',val:s.avgOrpL+' mV',color:t.orpL}] },
       ];
@@ -473,6 +506,20 @@ export default {
     },
     activeKpiCards()       { return this.viewMode==='annual' ? this.annualKpiCards      : this.kpiCards; },
     activeTreatPerfCards() { return this.viewMode==='annual' ? this.annualTreatPerfCards : this.treatPerfCards; },
+    heroCard() {
+      const tp = this.activeTreatPerfCards;
+      if (!tp.length) return null;
+      const isAnnual = this.viewMode === 'annual';
+      const s = isAnnual ? this.annualStats : this.stats;
+      const flow  = s.totalFlow  || 0;
+      const serum = s.serumTotal || 0;
+      const latex = s.latexTotal || 0;
+      const kwh   = s.kwhTotal   || 0;
+      const estCost = isAnnual ? (s.totalCost || 0) : (parseInt(s.totalCost) || Math.round(kwh * this.costRate));
+      const orpS  = isAnnual ? (s.avgOrpS || '—') : (s.avgORPSerum || '—');
+      const orpL  = isAnnual ? (s.avgOrpL || '—') : (s.avgORPLatex || '—');
+      return { eff: tp[0], cost: tp[1], flow, serum, latex, kwh, estCost, orpS, orpL, kwh1: Math.round(kwh*.52), kwh2: Math.round(kwh*.48) };
+    },
   },
   async created() {
     this._chartMain=null; this._chartORP=null; this._chartPerf=null; this._chartBlower=null;
@@ -728,14 +775,38 @@ export default {
 
 /* ── Monthly body: left KPI panel + charts ── */
 .monthly-body   { flex:1; min-height:0; display:flex; gap:7px; }
-.monthly-kpi-col { display:flex; flex-direction:column; gap:5px; width:175px; flex-shrink:0; }
+.monthly-kpi-col { display:flex; flex-direction:column; gap:5px; width:192px; flex-shrink:0; }
 .monthly-charts  { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:5px; }
-.mkpi-card { display:flex; flex-direction:column; gap:4px; background:var(--ex-card-bg); border-left:3px solid var(--c); padding:9px 11px; border-radius:4px; flex:1; min-height:0; overflow:hidden; }
-.mkpi-card .kpi-tag    { font-size:8px; white-space:normal; line-height:1.2; }
-.mkpi-card .kpi-big    { font-size:20px; }
-.mkpi-card .kpi-unit-b { font-size:11px; }
-.mkpi-card .kpi-chip   { font-size:8px; padding:1px 6px; }
-.mkpi-card .kpi-foot   { font-size:8px; white-space:normal; line-height:1.3; }
+/* ── Hero card ── */
+.hero-card {
+  flex:1; min-height:0;
+  display:flex; flex-direction:column; gap:6px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--c) 12%, var(--ex-card-bg)) 0%, var(--ex-card-bg) 55%);
+  border:1px solid color-mix(in srgb, var(--c) 30%, var(--ex-card-bdr));
+  border-left:3px solid var(--c);
+  border-radius:10px; padding:12px 13px;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--c) 10%, transparent), inset 0 0 30px color-mix(in srgb, var(--c) 4%, transparent);
+  overflow:hidden;
+}
+.hero-tag { font-size:9px; font-weight:700; letter-spacing:.12em; color:var(--ex-label); text-transform:uppercase; }
+.hero-main-row { display:flex; align-items:baseline; gap:5px; flex-wrap:wrap; }
+.hero-big { font-family:'JetBrains Mono',monospace; font-size:34px; font-weight:800; line-height:1; }
+.hero-unit { font-size:12px; font-weight:600; }
+.hero-badge { font-size:8px; font-weight:700; letter-spacing:.07em; padding:2px 7px; border-radius:3px; border:1px solid; margin-left:auto; align-self:center; }
+.hero-meter { height:4px; background:rgba(255,255,255,.06); border-radius:2px; overflow:hidden; flex-shrink:0; }
+.hero-meter-fill { height:100%; border-radius:2px; transition:width .6s ease; }
+.hero-sub { font-size:7px; color:var(--ex-label); text-align:right; margin-top:-2px; }
+.hero-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; flex:1; min-height:0; }
+.hero-sec {
+  background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.05);
+  border-radius:6px; padding:7px 9px;
+  display:flex; flex-direction:column; gap:2px; overflow:hidden; min-height:0;
+}
+.hero-sec-lbl { font-size:7px; font-weight:700; letter-spacing:.09em; color:var(--ex-label); text-transform:uppercase; margin-bottom:1px; }
+.hero-sec-val { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; display:flex; align-items:baseline; gap:2px; }
+.hero-sec-u   { font-size:8px; font-weight:400; color:var(--ex-text-sub); }
+.hero-sec-chip { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--ex-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hero-foot { font-size:7px; color:var(--ex-label); padding-top:4px; border-top:1px solid rgba(255,255,255,.05); margin-top:auto; flex-shrink:0; }
 
 .chart-card {
   background:var(--ex-card-bg);
