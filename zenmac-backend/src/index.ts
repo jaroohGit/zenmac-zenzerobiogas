@@ -69,6 +69,22 @@ let mqttData: Record<string, JsonMap> = {
   kd5: {},
 };
 
+// ── Blower runtime & energy accumulators (daily, reset at midnight) ──────
+type BlowerAccum = {
+  kwhToday: number;
+  runSeconds: number;
+  lastStatus: 'RUN' | 'STOP';
+  runStartTs: number;
+  lastKw: number;
+  lastSampleTs: number;
+};
+
+const blowerAccum: { tb1: BlowerAccum; tb2: BlowerAccum } = {
+  tb1: { kwhToday: 0, runSeconds: 0, lastStatus: 'STOP', runStartTs: 0, lastKw: 0, lastSampleTs: Date.now() },
+  tb2: { kwhToday: 0, runSeconds: 0, lastStatus: 'STOP', runStartTs: 0, lastKw: 0, lastSampleTs: Date.now() },
+};
+let todayDate = new Date().toDateString();
+
 function val(v: unknown, fallback = 0): number {
   if (Array.isArray(v)) return v[0] != null ? Number(v[0]) : fallback;
   return v != null ? Number(v) : fallback;
@@ -94,6 +110,44 @@ function zeroHistory() {
     blower2Flow: zeros,
     blower2Power: zeros,
   };
+}
+
+function checkMidnightReset(): void {
+  const now = new Date().toDateString();
+  if (now !== todayDate) {
+    todayDate = now;
+    const ts = Date.now();
+    for (const b of [blowerAccum.tb1, blowerAccum.tb2]) {
+      b.kwhToday = 0;
+      b.runSeconds = 0;
+      if (b.lastStatus === 'RUN') b.runStartTs = ts;
+    }
+  }
+}
+
+function updateBlowerAccum(key: 'tb1' | 'tb2', status: 'RUN' | 'STOP', kw: number): void {
+  checkMidnightReset();
+  const now = Date.now();
+  const b = blowerAccum[key];
+  // kWh integration — cap sample gap at 5 min to avoid first-boot spike
+  const dtHours = Math.min((now - b.lastSampleTs) / 3_600_000, 5 / 60);
+  if (b.lastStatus === 'RUN') b.kwhToday += b.lastKw * dtHours;
+  // run-time tracking
+  if (b.lastStatus !== 'RUN' && status === 'RUN') b.runStartTs = now;
+  if (b.lastStatus === 'RUN' && status !== 'RUN') {
+    if (b.runStartTs > 0) b.runSeconds += (now - b.runStartTs) / 1000;
+    b.runStartTs = 0;
+  }
+  b.lastStatus = status;
+  b.lastKw = kw;
+  b.lastSampleTs = now;
+}
+
+function getRunHours(key: 'tb1' | 'tb2'): number {
+  const b = blowerAccum[key];
+  let secs = b.runSeconds;
+  if (b.lastStatus === 'RUN' && b.runStartTs > 0) secs += (Date.now() - b.runStartTs) / 1000;
+  return +(secs / 3600).toFixed(2);
 }
 
 function mapMqttToLive() {
@@ -133,6 +187,8 @@ function mapMqttToLive() {
       driveTemp: +val(d1["TB_1_DRIVE TEMPERATURE_C"]).toFixed(1),
       outsideTemp: +val(d1["TB_1_OUTSIDE TEMPERATURE_C"]).toFixed(1),
       onOffCount: Math.round(val(d1["TB_1_Number of ON OFF"], val(d1["TB_1_NUMBER OF ON/OFF"], 0))),
+      runHoursToday: getRunHours('tb1'),
+      kwhToday: +blowerAccum.tb1.kwhToday.toFixed(2),
     },
     blower2: {
       status: d5["TB-02_Status"] === 1 || d5["TB-02_Status"] === "ON" ? "RUN" : "STOP",
@@ -146,6 +202,8 @@ function mapMqttToLive() {
       driveTemp: +val(d1["TB_2_DRIVE TEMPERATURE_C"]).toFixed(1),
       outsideTemp: +val(d1["TB_2_OUTSIDE TEMPERATURE_C"]).toFixed(1),
       onOffCount: Math.round(val(d1["TB_2_Number of ON OFF"])),
+      runHoursToday: getRunHours('tb2'),
+      kwhToday: +blowerAccum.tb2.kwhToday.toFixed(2),
     },
     processPump: { status: d5["Process pump_Status"] === 1 || d5["Process pump_Status"] === "ON" ? "RUN" : "STOP" },
     serumPump: { status: d5["Serum pump_Status"] === 1 || d5["Serum pump_Status"] === "ON" ? "RUN" : "STOP" },
@@ -232,6 +290,22 @@ app.get("/api/history", (_req: Request, res: Response) => {
 app.get("/api/history/:topicKey/:field", (req: Request, res: Response) => {
   const key = `${req.params.topicKey}.${req.params.field}`;
   res.json(historyPoints.get(key) || []);
+});
+
+app.get("/api/blower-stats", (_req: Request, res: Response) => {
+  res.json({
+    date: todayDate,
+    tb1: {
+      status: blowerAccum.tb1.lastStatus,
+      kwhToday: +blowerAccum.tb1.kwhToday.toFixed(2),
+      runHoursToday: getRunHours('tb1'),
+    },
+    tb2: {
+      status: blowerAccum.tb2.lastStatus,
+      kwhToday: +blowerAccum.tb2.kwhToday.toFixed(2),
+      runHoursToday: getRunHours('tb2'),
+    },
+  });
 });
 
 app.get("/api/report", (_req: Request, res: Response) => {
@@ -371,6 +445,16 @@ mqttClient.on("message", (topic: string, message: Buffer) => {
 
     mqttData[key] = data;
     pushHistory(key, data);
+
+    // update blower energy/runtime accumulators on kd1 or kd5 change
+    if (key === 'kd1' || key === 'kd5') {
+      const d1 = mqttData.kd1 || {};
+      const d5 = mqttData.kd5 || {};
+      const st1: 'RUN' | 'STOP' = (d5['TB-01_Status'] === 1 || d5['TB-01_Status'] === 'ON') ? 'RUN' : 'STOP';
+      const st2: 'RUN' | 'STOP' = (d5['TB-02_Status'] === 1 || d5['TB-02_Status'] === 'ON') ? 'RUN' : 'STOP';
+      updateBlowerAccum('tb1', st1, val(d1['TB_1_BLOWER POWER_kW']) / 10);
+      updateBlowerAccum('tb2', st2, val(d1['TB_2_BLOWER POWER_kW']) / 10);
+    }
 
     io.emit("kd:update", { key, data });
     io.emit("kd:snapshot", mqttData);

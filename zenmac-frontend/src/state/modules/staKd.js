@@ -44,7 +44,9 @@ export const getters = {
   tb1MotorTemp:   s => { const v = parseFloat(s.kd1['TB_1_MOTOR TEMPERATURE_C']);     return isNaN(v) ? '—' : (v / 10).toFixed(1); },
   tb1DriveTemp:   s => { const v = parseFloat(s.kd1['TB_1_DRIVE TEMPERATURE_C']);     return isNaN(v) ? '—' : (v / 10).toFixed(1); },
   tb1DischTemp:   s => { const v = parseFloat(s.kd1['TB_1_DISCHARGE TEMPERATURE_C']); return isNaN(v) ? '—' : (v / 10).toFixed(1); },
-  tb1OnOff:       s => s.kd1['TB_1_Number of ON OFF'] ?? '—',
+  tb1OnOff:        s => s.kd1['TB_1_Number of ON OFF'] ?? '—',
+  tb1KwhToday:     s => s.live?.blower1?.kwhToday     ?? '—',
+  tb1RunHoursToday:s => s.live?.blower1?.runHoursToday ?? '—',
 
   tb2Power:       s => { const v = parseFloat(s.kd1['TB_2_BLOWER POWER_kW']);         return isNaN(v) ? '—' : (v / 10).toFixed(1); },
   tb2Current:     s => { const v = parseFloat(s.kd1['TB_2_MOTOR CURRENT_A']);         return isNaN(v) ? '—' : (v / 10).toFixed(1); },
@@ -55,7 +57,9 @@ export const getters = {
   tb2MotorTemp:   s => { const v = parseFloat(s.kd1['TB_2_MOTOR TEMPERATURE_C']);     return isNaN(v) ? '—' : (v / 10).toFixed(1); },
   tb2DriveTemp:   s => { const v = parseFloat(s.kd1['TB_2_DRIVE TEMPERATURE_C']);     return isNaN(v) ? '—' : (v / 10).toFixed(1); },
   tb2DischTemp:   s => { const v = parseFloat(s.kd1['TB_2_DISCHARGE TEMPERATURE_C']); return isNaN(v) ? '—' : (v / 10).toFixed(1); },
-  tb2OnOff:       s => s.kd1['TB_2_Number of ON OFF'] ?? '—',
+  tb2OnOff:        s => s.kd1['TB_2_Number of ON OFF'] ?? '—',
+  tb2KwhToday:     s => s.live?.blower2?.kwhToday     ?? '—',
+  tb2RunHoursToday:s => s.live?.blower2?.runHoursToday ?? '—',
 
   tb1Status:          s => s.kd5['TB-01_Status']            ?? '—',
   tb2Status:          s => s.kd5['TB-02_Status']            ?? '—',
