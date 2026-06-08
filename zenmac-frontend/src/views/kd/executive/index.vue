@@ -6,8 +6,14 @@
       <span class="exec-acc-dot"></span>
       <span class="exec-heading">EXECUTIVE SUMMARY — OPERATION REPORT</span>
 
-      <!-- Month navigation -->
-      <div class="month-nav">
+      <!-- View toggle -->
+      <div class="view-toggle">
+        <button class="vt-btn" :class="{active:viewMode==='monthly'}" @click="switchView('monthly')">MONTHLY</button>
+        <button class="vt-btn" :class="{active:viewMode==='annual'}"  @click="switchView('annual')">ANNUAL</button>
+      </div>
+
+      <!-- Month navigation (monthly mode only) -->
+      <div class="month-nav" v-if="viewMode==='monthly'">
         <button class="mn-btn" @click="changeMonth(1)" :disabled="monthOffset>=5"><i class="bx bx-chevron-left"></i></button>
         <span class="mn-label">{{ monthLabel }}</span>
         <button class="mn-btn" @click="changeMonth(-1)" :disabled="monthOffset<=0"><i class="bx bx-chevron-right"></i></button>
@@ -27,7 +33,7 @@
 
     <!-- ── KPI GRID 5 cards ── -->
     <div class="kpi-grid">
-      <div class="kpi-card" v-for="k in kpiCards" :key="k.tag" :style="`--c:${k.color}`">
+      <div class="kpi-card" v-for="k in activeKpiCards" :key="k.tag" :style="`--c:${k.color}`">
         <div class="kpi-tag">{{ k.tag }}</div>
         <div class="kpi-big-row">
           <span class="kpi-big" :style="`color:${k.color}`">{{ k.big }}</span>
@@ -62,7 +68,7 @@
       <div class="monthly-charts">
         <div class="chart-card">
           <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.perf}`"></span>TREATMENT EFFICIENCY — m³/kWh
+            <span class="ch-dot" :style="`background:${t.perf}`"></span>{{ viewMode==='annual'?'EFFICIENCY BY MONTH':'TREATMENT EFFICIENCY' }} — m³/kWh
             <span class="legend">
               <span class="ls" :style="`background:${t.perf}`"></span>m³/kWh
               <span class="ll" :style="`background:${t.hWarn};margin-left:4px`"></span>฿/m³
@@ -72,7 +78,7 @@
         </div>
         <div class="chart-card">
           <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.kwh}`"></span>BLOWER ENERGY — TB-01 vs TB-02 (kWh/day)
+            <span class="ch-dot" :style="`background:${t.kwh}`"></span>BLOWER ENERGY — TB-01 vs TB-02 {{ viewMode==='annual'?'(kWh/month)':'(kWh/day)' }}
             <span class="legend">
               <span class="ls" :style="`background:${t.kwh}`"></span>TB-01
               <span class="ls" :style="`background:${t.cost}`"></span>TB-02
@@ -84,14 +90,14 @@
         </div>
         <div class="chart-card">
           <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.orpS}`"></span>ORP AVERAGE / DAY (mV)
+            <span class="ch-dot" :style="`background:${t.orpS}`"></span>ORP AVERAGE {{ viewMode==='annual'?'/ MONTH':'/ DAY' }} (mV)
             <span class="legend"><span class="ls" :style="`background:${t.orpS}`"></span>Serum <span class="ls" :style="`background:${t.orpL}`"></span>Latex</span>
           </div>
           <div class="chart-wrap"><canvas ref="chartORP"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.kwh}`"></span>DAILY FLOW (m³) &amp; ENERGY (kWh/day)
+            <span class="ch-dot" :style="`background:${t.kwh}`"></span>{{ viewMode==='annual'?'MONTHLY':'DAILY' }} FLOW (m³) &amp; ENERGY (kWh)
             <span class="legend"><span class="ls" :style="`background:${t.serum}`"></span>Serum <span class="ls" :style="`background:${t.latex}`"></span>Latex <span class="ll" :style="`background:${t.kwh};margin-left:4px`"></span>kWh</span>
           </div>
           <div class="chart-wrap"><canvas ref="chartMain"></canvas></div>
@@ -104,14 +110,18 @@
     <div class="tp-strip">
       <div class="tp-hdr">
         <span class="tp-title">TREATMENT PERFORMANCE</span>
-        <span class="tp-sub">ประสิทธิภาพการบำบัด Serum &amp; Latex · ต้นทุนพลังงาน</span>
+        <span class="tp-sub">{{ viewMode==='annual'?'สรุปรายปี':'สรุปรายเดือน' }} · ประสิทธิภาพการบำบัด Serum &amp; Latex</span>
       </div>
       <div class="tp-cards">
-        <div class="tp-card" v-for="k in treatPerfCards" :key="k.tag" :style="`--c:${k.color}`">
+        <div class="tp-card" v-for="k in activeTreatPerfCards" :key="k.tag" :style="`--c:${k.color}`">
           <div class="kpi-tag">{{ k.tag }}</div>
           <div class="kpi-big-row">
             <span class="tp-big" :style="`color:${k.color}`">{{ k.big }}</span>
             <span class="tp-unit" :style="`color:${k.color}`">{{ k.unit }}</span>
+            <span class="tp-status" v-if="k.status" :style="`color:${k.color}`">{{ k.status }}</span>
+          </div>
+          <div class="tp-meter" v-if="k.meter!==undefined">
+            <div class="tp-meter-fill" :style="`width:${k.meter}%;background:${k.meterColor}`"></div>
           </div>
           <div class="kpi-foot">{{ k.foot }}</div>
         </div>
@@ -200,6 +210,23 @@ function h2r(hex, a) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
+function genAnnualData() {
+  const now = new Date();
+  const y = now.getFullYear(), curM = now.getMonth();
+  const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return labels.map((label, m) => {
+    if (m > curM) return { label, month:m+1, serum:null, latex:null, kwh:null, kwh1:null, kwh2:null, orp_serum:null, orp_latex:null, flow:null };
+    const days = new Date(y, m+1, 0).getDate();
+    const serum = Math.round((100+Math.random()*300)*days);
+    const latex = Math.round((80 +Math.random()*220)*days);
+    const kwh   = Math.round((150+Math.random()*200)*days);
+    const kwh1  = Math.round(kwh*.52), kwh2 = kwh-kwh1;
+    const orp_serum = Math.round(150+Math.random()*230);
+    const orp_latex = Math.round(120+Math.random()*250);
+    return { label, month:m+1, serum, latex, kwh, kwh1, kwh2, orp_serum, orp_latex, flow:serum+latex };
+  });
+}
+
 function genMonthData(offset) {
   const now = new Date();
   const target = new Date(now.getFullYear(), now.getMonth()-offset, 1);
@@ -228,13 +255,17 @@ const fitY = s => { s.width=52; };
 export default {
   name: 'KDExecutive',
   data() {
-    return { monthOffset:0, monthData:[], costRate:4.50, currentThemeKey:'slate', THEMES };
+    return { monthOffset:0, monthData:[], annualData:[], viewMode:'monthly', costRate:4.50, currentThemeKey:'slate', THEMES };
   },
   watch: {
     costRate() {
-      const cd=this.getChartData();
+      const cd = this.viewMode==='annual' ? this.getAnnualChartData() : this.getChartData();
       if(this._chartBlower) { this._chartBlower.data.datasets[2].data=cd.cost; this._chartBlower.update('none'); }
       if(this._chartPerf)   { this._chartPerf.data.datasets[1].data=cd.costPerM3; this._chartPerf.update('none'); }
+    },
+    viewMode() {
+      this.destroyCharts();
+      this.$nextTick(()=>this.buildCharts());
     },
     currentThemeKey() {
       this.destroyCharts();
@@ -374,25 +405,76 @@ export default {
       const s=this.stats, t=this.t;
       const d=this.monthData.filter(r=>r.flow!==null&&r.kwh!==null);
       if(!d.length) return [];
-      const treatEff  = s.kwhTotal ? (s.totalFlow/s.kwhTotal).toFixed(2) : '—';
-      const costPerM3 = s.totalFlow ? ((s.kwhTotal*this.costRate)/s.totalFlow).toFixed(1) : '—';
+      const effVal    = s.kwhTotal ? s.totalFlow/s.kwhTotal : 0;
+      const costVal   = s.totalFlow ? (s.kwhTotal*this.costRate)/s.totalFlow : 0;
+      const effMeter  = Math.min(100,Math.round(effVal/2.0*100));
+      const costMeter = Math.max(0,Math.min(100,Math.round((1-costVal/15)*100)));
+      const effColor  = effMeter>=100?t.hOk:effMeter>=60?t.hWarn:t.hCrit;
+      const costColor = costMeter>=60?t.hOk:costMeter>=30?t.hWarn:t.hCrit;
       const orpOk     = d.filter(r=>r.orp_serum>150&&r.orp_latex>150).length;
       const orpAch    = Math.round(orpOk/d.length*100);
       const orpColor  = orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit;
       const bestDay   = d.reduce((a,r)=>(r.flow&&r.kwh&&r.flow/r.kwh>a.r)?{day:r.day,r:r.flow/r.kwh}:a,{day:'—',r:0});
       const worstDay  = d.reduce((a,r)=>(r.flow&&r.kwh&&r.kwh/r.flow>a.r)?{day:r.day,r:r.kwh/r.flow}:a,{day:'—',r:0});
       return [
-        { tag:'TREAT. EFFICIENCY', big:treatEff,  unit:'m³/kWh', color:t.perf,   foot:'Flow ÷ Energy — Higher is Better' },
-        { tag:'AERATION COST',     big:costPerM3, unit:'฿/m³',   color:t.hWarn,  foot:`Rate ${this.costRate} ฿/kWh` },
+        { tag:'TREAT. EFFICIENCY', big:effVal.toFixed(2),  unit:'m³/kWh', color:effColor,  foot:'Flow ÷ Energy — Higher is Better', meter:effMeter,  meterColor:effColor,  status:effMeter>=100?'OPTIMAL':effMeter>=60?'MODERATE':'NEEDS WORK' },
+        { tag:'AERATION COST',     big:costVal.toFixed(1), unit:'฿/m³',   color:costColor, foot:`Rate ${this.costRate} ฿/kWh`,      meter:costMeter, meterColor:costColor, status:costMeter>=60?'EFFICIENT':costMeter>=30?'MODERATE':'HIGH COST' },
         { tag:'ORP ACHIEVEMENT',   big:orpAch,    unit:'%',      color:orpColor,  foot:`${orpOk}/${d.length} days ORP > 150 mV` },
         { tag:'BEST EFF. DAY',     big:`D${bestDay.day}`,  unit:'', color:t.hOk,   foot:`${bestDay.r.toFixed(2)} m³/kWh` },
         { tag:'WORST EFF. DAY',    big:`D${worstDay.day}`, unit:'', color:t.hCrit, foot:`${worstDay.r.toFixed(2)} kWh/m³` },
       ];
     },
+    annualStats() {
+      const d=this.annualData.filter(r=>r.flow!==null);
+      if(!d.length) return {totalFlow:0,kwhTotal:0,totalCost:'—'};
+      const totalFlow=d.reduce((a,r)=>a+r.flow,0);
+      const kwhTotal=d.reduce((a,r)=>a+r.kwh,0);
+      const totalCost=Math.round(kwhTotal*this.costRate);
+      return {totalFlow,kwhTotal,totalCost,serumTotal:d.reduce((a,r)=>a+r.serum,0),latexTotal:d.reduce((a,r)=>a+r.latex,0),avgOrpS:Math.round(d.reduce((a,r)=>a+r.orp_serum,0)/d.length),avgOrpL:Math.round(d.reduce((a,r)=>a+r.orp_latex,0)/d.length),months:d.length};
+    },
+    annualKpiCards() {
+      const s=this.annualStats, t=this.t;
+      const eff = s.kwhTotal?(s.totalFlow/s.kwhTotal).toFixed(2):'—';
+      const orpOk=this.annualData.filter(r=>r.orp_serum!==null&&r.orp_serum>150&&r.orp_latex>150).length;
+      const orpAch=s.months?Math.round(orpOk/s.months*100):0;
+      return [
+        { tag:'ANNUAL FLOW',       big:this.fmt0(s.totalFlow),   unit:'m³',   color:t.accent, chips:[{label:'Serum',val:this.fmt0(s.serumTotal),color:t.serum},{label:'Latex',val:this.fmt0(s.latexTotal),color:t.latex}] },
+        { tag:'ANNUAL ENERGY',     big:this.fmt0(s.kwhTotal),    unit:'kWh',  color:t.kwh,    chips:[{label:'TB-01',val:this.fmt0(Math.round(s.kwhTotal*.52)),color:t.kwh},{label:'TB-02',val:this.fmt0(Math.round(s.kwhTotal*.48)),color:t.cost}] },
+        { tag:'AVG EFFICIENCY',    big:eff,                       unit:'m³/kWh',color:t.perf,  chips:[], foot:'Annual Flow ÷ Energy' },
+        { tag:'EST. ANNUAL COST',  big:this.fmt0(s.totalCost),   unit:'฿',    color:t.cost,   chips:[], foot:`${s.months} months · ${this.costRate} ฿/kWh` },
+        { tag:'ORP ACHIEVEMENT',   big:orpAch,                   unit:'%',    color:orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit, chips:[{label:'Serum avg',val:s.avgOrpS+' mV',color:t.orpS},{label:'Latex avg',val:s.avgOrpL+' mV',color:t.orpL}] },
+      ];
+    },
+    annualTreatPerfCards() {
+      const s=this.annualStats, t=this.t;
+      const d=this.annualData.filter(r=>r.flow!==null);
+      if(!d.length) return [];
+      const effVal    = s.kwhTotal ? s.totalFlow/s.kwhTotal : 0;
+      const costVal   = s.totalFlow ? s.kwhTotal*this.costRate/s.totalFlow : 0;
+      const effMeter  = Math.min(100,Math.round(effVal/2.0*100));
+      const costMeter = Math.max(0,Math.min(100,Math.round((1-costVal/15)*100)));
+      const effColor  = effMeter>=100?t.hOk:effMeter>=60?t.hWarn:t.hCrit;
+      const costColor = costMeter>=60?t.hOk:costMeter>=30?t.hWarn:t.hCrit;
+      const orpOk=d.filter(r=>r.orp_serum>150&&r.orp_latex>150).length;
+      const orpAch=Math.round(orpOk/d.length*100);
+      const orpColor=orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit;
+      const bestM=d.reduce((a,r)=>(r.flow&&r.kwh&&r.flow/r.kwh>a.r)?{label:r.label,r:r.flow/r.kwh}:a,{label:'—',r:0});
+      const worstM=d.reduce((a,r)=>(r.flow&&r.kwh&&r.kwh/r.flow>a.r)?{label:r.label,r:r.kwh/r.flow}:a,{label:'—',r:0});
+      return [
+        { tag:'ANNUAL EFFICIENCY', big:effVal.toFixed(2),  unit:'m³/kWh', color:effColor,  foot:'Annual Flow ÷ Energy', meter:effMeter,  meterColor:effColor,  status:effMeter>=100?'OPTIMAL':effMeter>=60?'MODERATE':'NEEDS WORK' },
+        { tag:'AVG AERATION COST', big:costVal.toFixed(1), unit:'฿/m³',   color:costColor, foot:`Rate ${this.costRate} ฿/kWh`,  meter:costMeter, meterColor:costColor, status:costMeter>=60?'EFFICIENT':costMeter>=30?'MODERATE':'HIGH COST' },
+        { tag:'ORP ACHIEVEMENT',   big:orpAch, unit:'%',  color:orpColor, foot:`${orpOk}/${d.length} months ORP > 150 mV` },
+        { tag:'BEST MONTH',        big:bestM.label,  unit:'', color:t.hOk,   foot:`${bestM.r.toFixed(2)} m³/kWh` },
+        { tag:'WORST MONTH',       big:worstM.label, unit:'', color:t.hCrit, foot:`${worstM.r.toFixed(2)} kWh/m³` },
+      ];
+    },
+    activeKpiCards()       { return this.viewMode==='annual' ? this.annualKpiCards      : this.kpiCards; },
+    activeTreatPerfCards() { return this.viewMode==='annual' ? this.annualTreatPerfCards : this.treatPerfCards; },
   },
   created() {
     this._chartMain=null; this._chartORP=null; this._chartPerf=null; this._chartBlower=null;
     this.monthData=genMonthData(0);
+    this.annualData=genAnnualData();
   },
   mounted()      { this.buildCharts(); },
   beforeUnmount(){ this.destroyCharts(); },
@@ -429,7 +511,8 @@ export default {
       };
     },
     buildCharts() {
-      this.buildMonthlyCharts();
+      if (this.viewMode==='annual') this.buildAnnualCharts();
+      else this.buildMonthlyCharts();
     },
     _chartBase() {
       const tk=this.t;
@@ -439,6 +522,66 @@ export default {
       const scY=(cb,color=tk.tick)=>({afterFit:fitY,ticks:{color,font:{size:9},callback:cb},grid:{display:false},border:{color:axisBdr}});
       const sX={...SCALE_X,ticks:{...SCALE_X.ticks,color:tk.tick}};
       return {tk,axisBdr,BASE,scY,sX};
+    },
+    switchView(mode) { this.viewMode = mode; },
+    getAnnualChartData() {
+      const d=this.annualData, rate=parseFloat(this.costRate)||4.5;
+      return {
+        labels:    d.map(r=>r.label),
+        serum:     d.map(r=>r.serum),
+        latex:     d.map(r=>r.latex),
+        kwh:       d.map(r=>r.kwh),
+        kwh1:      d.map(r=>r.kwh1),
+        kwh2:      d.map(r=>r.kwh2),
+        orp_serum: d.map(r=>r.orp_serum),
+        orp_latex: d.map(r=>r.orp_latex),
+        cost:      d.map(r=>r.kwh!==null?+(r.kwh*rate).toFixed(0):null),
+        treatEff:  d.map(r=>r.flow&&r.kwh?+(r.flow/r.kwh).toFixed(3):null),
+        costPerM3: d.map(r=>r.flow&&r.kwh?+(r.kwh*rate/r.flow).toFixed(1):null),
+      };
+    },
+    buildAnnualCharts() {
+      const cd=this.getAnnualChartData();
+      const {tk,axisBdr,BASE,scY}=this._chartBase();
+      const sXA={ ticks:{color:tk.tick,font:{size:9},maxRotation:0}, grid:{display:false}, border:{display:false} };
+      this._chartPerf=new Chart(this.$refs.chartPerf,{
+        type:'bar',data:{labels:cd.labels,datasets:[
+          {type:'bar',  label:'m³/kWh', data:cd.treatEff,  backgroundColor:h2r(tk.perf,.75), borderRadius:4, yAxisID:'y',  order:2},
+          {type:'line', label:'฿/m³',   data:cd.costPerM3, borderColor:tk.hWarn, backgroundColor:h2r(tk.hWarn,.06), borderWidth:2, pointRadius:4, pointBackgroundColor:tk.hWarn, tension:.4, fill:false, yAxisID:'y1', order:1},
+        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
+          x:sXA,
+          y: scY(v=>v.toFixed(2),tk.perf),
+          y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+v},grid:{display:false},border:{color:axisBdr}},
+        }},
+      });
+      this._chartBlower=new Chart(this.$refs.chartBlower,{
+        type:'bar',data:{labels:cd.labels,datasets:[
+          {label:'TB-01',data:cd.kwh1,backgroundColor:h2r(tk.kwh,.82),borderRadius:4,stack:'bl',yAxisID:'y'},
+          {label:'TB-02',data:cd.kwh2,backgroundColor:h2r(tk.cost,.72),borderRadius:4,stack:'bl',yAxisID:'y'},
+          {type:'line',label:'Cost ฿',data:cd.cost,borderColor:tk.hWarn,backgroundColor:h2r(tk.hWarn,.08),borderWidth:2,pointRadius:4,pointBackgroundColor:tk.hWarn,tension:.4,fill:false,yAxisID:'y1'},
+        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
+          x:sXA,
+          y:{...scY(v=>(v/1000).toFixed(0)+'k kWh'),stacked:true},
+          y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+(v/1000).toFixed(0)+'k'},grid:{display:false},border:{color:axisBdr}},
+        }},
+      });
+      this._chartORP=new Chart(this.$refs.chartORP,{
+        type:'line',data:{labels:cd.labels,datasets:[
+          {label:'Serum ORP',data:cd.orp_serum,borderColor:tk.orpS,backgroundColor:h2r(tk.orpS,.1),borderWidth:2,pointRadius:4,tension:.4,fill:true},
+          {label:'Latex ORP',data:cd.orp_latex,borderColor:tk.orpL,backgroundColor:h2r(tk.orpL,.1),borderWidth:2,pointRadius:4,tension:.4,fill:true},
+        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{x:sXA,y:scY(v=>v+' mV')}},
+      });
+      this._chartMain=new Chart(this.$refs.chartMain,{
+        type:'bar',data:{labels:cd.labels,datasets:[
+          {type:'bar',label:'Serum',data:cd.serum,backgroundColor:h2r(tk.serum,.78),stack:'flow',yAxisID:'y',borderRadius:4},
+          {type:'bar',label:'Latex',data:cd.latex,backgroundColor:h2r(tk.latex,.78),stack:'flow',yAxisID:'y',borderRadius:4},
+          {type:'line',label:'kWh',data:cd.kwh,borderColor:tk.kwh,backgroundColor:h2r(tk.kwh,.07),borderWidth:2,pointRadius:4,pointBackgroundColor:tk.kwh,tension:.4,fill:false,yAxisID:'y1'},
+        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
+          x:{...sXA,stacked:true},
+          y:{...scY(v=>(v/1000).toFixed(0)+'k m³'),stacked:true,position:'left'},
+          y1:{position:'right',ticks:{color:tk.y1,font:{size:9},callback:v=>(v/1000).toFixed(0)+'k kWh'},grid:{display:false},border:{color:axisBdr}},
+        }},
+      });
     },
     buildMonthlyCharts() {
       const cd=this.getChartData();
@@ -619,6 +762,22 @@ export default {
   background:linear-gradient(110deg,color-mix(in srgb,var(--c) 10%,var(--ex-card-bg)) 0%,var(--ex-card-bg) 60%);
   border-left:2px solid var(--c);
 }
-.tp-big  { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; line-height:1; }
-.tp-unit { font-size:10px; font-weight:600; margin-left:3px; }
+.tp-big    { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; line-height:1; }
+.tp-unit   { font-size:10px; font-weight:600; margin-left:3px; }
+.tp-status { font-size:8px; font-weight:700; letter-spacing:.07em; margin-left:auto; padding:1px 5px; border-radius:3px; background:color-mix(in srgb,var(--c) 14%,transparent); }
+.tp-meter  { height:3px; background:var(--ex-card-bdr); border-radius:2px; overflow:hidden; margin:2px 0; }
+.tp-meter-fill { height:100%; border-radius:2px; transition:width .6s ease; }
+
+/* ── View toggle ── */
+.view-toggle { display:flex; gap:2px; background:var(--ex-mn-bg); border:1px solid var(--ex-mn-bdr); border-radius:6px; padding:2px; }
+.vt-btn {
+  font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; letter-spacing:.08em;
+  padding:3px 10px; border-radius:4px; border:none; cursor:pointer; transition:all .15s;
+  background:transparent; color:var(--ex-mn-color);
+}
+.vt-btn.active {
+  background:var(--ex-accent); color:#fff;
+  box-shadow:0 1px 6px color-mix(in srgb,var(--ex-accent) 40%,transparent);
+}
+.vt-btn:not(.active):hover { background:var(--ex-mn-hbg); color:var(--ex-mn-hclr); }
 </style>
