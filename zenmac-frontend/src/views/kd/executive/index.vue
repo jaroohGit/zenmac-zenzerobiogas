@@ -360,7 +360,7 @@ export default {
       const kwhTotal=d.reduce((a,r)=>a+r.kwh,0);
       const avgORPSerum=(d.reduce((a,r)=>a+r.orp_serum,0)/d.length).toFixed(0);
       const avgORPLatex=(d.reduce((a,r)=>a+r.orp_latex,0)/d.length).toFixed(0);
-      const efficiency=(kwhTotal/totalFlow).toFixed(2);
+      const efficiency=kwhTotal?(totalFlow/kwhTotal).toFixed(2):'—';
       const totalCost=(kwhTotal*this.costRate).toFixed(0);
       const best=d.reduce((a,r)=>r.flow>a.flow?r:a,d[0]);
       return {totalFlow,serumTotal,latexTotal,kwhTotal,avgORPSerum,avgORPLatex,efficiency,totalCost,bestDay:best};
@@ -388,9 +388,9 @@ export default {
           ],
         },
         {
-          tag:'PERFORMANCE', big:s.efficiency, unit:'kWh/m³', color:t.perf,
+          tag:'PERFORMANCE', big:s.efficiency, unit:'m³/kWh', color:t.perf,
           chips:[],
-          foot:'Total Energy ÷ Total Flow',
+          foot:'Flow ÷ Energy — Higher is Better',
         },
         {
           tag:'EST. ENERGY COST', big:this.fmt0(s.totalCost), unit:'฿', color:t.cost,
@@ -416,12 +416,12 @@ export default {
       const kwhTotal    = Math.round(d.reduce((a,r)=>a+(r.kwh||0),0));
       const avgORPSerum = Math.round(d.reduce((a,r)=>a+(r.orpSerum||0),0)/d.length);
       const avgORPLatex = Math.round(d.reduce((a,r)=>a+(r.orpLatex||0),0)/d.length);
-      const eff         = totalFlow?((kwhTotal/totalFlow).toFixed(2)):'—';
+      const eff         = kwhTotal?((totalFlow/kwhTotal).toFixed(2)):'—';
       const orpAvg      = Math.round((avgORPSerum+avgORPLatex)/2);
       return [
         {
-          tag:'PERFORMANCE', big:eff, unit:'kWh/m³', color:t.perf, flex:1,
-          chips:[], foot:'Energy ÷ Flow',
+          tag:'PERFORMANCE', big:eff, unit:'m³/kWh', color:t.perf, flex:1,
+          chips:[], foot:'Flow ÷ Energy — Higher is Better',
         },
         {
           tag:'BLOWER ENERGY', big:this.fmt0(kwhTotal), unit:'kWh', color:t.kwh, flex:1,
