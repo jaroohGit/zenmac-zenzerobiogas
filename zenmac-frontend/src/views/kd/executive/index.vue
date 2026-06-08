@@ -60,7 +60,7 @@
 
       <!-- Right: charts -->
       <div class="monthly-charts">
-        <div class="chart-card chart-sm">
+        <div class="chart-card">
           <div class="chart-hdr">
             <span class="ch-dot" :style="`background:${t.perf}`"></span>TREATMENT EFFICIENCY — m³/kWh
             <span class="legend">
@@ -70,26 +70,26 @@
           </div>
           <div class="chart-wrap"><canvas ref="chartPerf"></canvas></div>
         </div>
-        <div class="chart-card chart-md">
+        <div class="chart-card">
           <div class="chart-hdr">
             <span class="ch-dot" :style="`background:${t.kwh}`"></span>BLOWER ENERGY — TB-01 vs TB-02 (kWh/day)
             <span class="legend">
               <span class="ls" :style="`background:${t.kwh}`"></span>TB-01
               <span class="ls" :style="`background:${t.cost}`"></span>TB-02
-              <span class="ll" :style="`background:${t.hWarn};margin-left:4px`"></span>Cost
+              <span class="ll" :style="`background:${t.hWarn};margin-left:4px`"></span>Cost ฿
             </span>
             <span class="ctrl-group">Rate <input type="number" v-model.number="costRate" step="0.10" min="1" max="20" class="ctrl-input" :style="`color:${t.hWarn};border-color:${t.hWarn}40;background:${t.hWarn}14`"/> ฿/kWh</span>
           </div>
           <div class="chart-wrap"><canvas ref="chartBlower"></canvas></div>
         </div>
-        <div class="chart-card chart-sm">
+        <div class="chart-card">
           <div class="chart-hdr">
             <span class="ch-dot" :style="`background:${t.orpS}`"></span>ORP AVERAGE / DAY (mV)
             <span class="legend"><span class="ls" :style="`background:${t.orpS}`"></span>Serum <span class="ls" :style="`background:${t.orpL}`"></span>Latex</span>
           </div>
           <div class="chart-wrap"><canvas ref="chartORP"></canvas></div>
         </div>
-        <div class="chart-card chart-lg">
+        <div class="chart-card">
           <div class="chart-hdr">
             <span class="ch-dot" :style="`background:${t.kwh}`"></span>DAILY FLOW (m³) &amp; ENERGY (kWh/day)
             <span class="legend"><span class="ls" :style="`background:${t.serum}`"></span>Serum <span class="ls" :style="`background:${t.latex}`"></span>Latex <span class="ll" :style="`background:${t.kwh};margin-left:4px`"></span>kWh</span>
@@ -118,87 +118,11 @@
       </div>
     </div>
 
-    <!-- ── BLOWER OPERATIONS STRIP ── -->
-    <div class="bl-strip">
-      <div class="bl-strip-hdr">
-        <span class="bl-live-dot"></span>
-        <span class="bl-strip-title">BLOWER OPERATIONS — TODAY</span>
-      </div>
-      <div class="bl-cards">
-
-        <!-- TB-01 -->
-        <div class="bl-card" :class="liveB1.status==='RUN'?'bl-run':'bl-stop'">
-          <div class="bl-name-row">
-            <span class="bl-dot"></span>
-            <span class="bl-name">TB-01</span>
-            <span class="bl-badge">{{ liveB1.status || 'N/A' }}</span>
-          </div>
-          <div class="bl-metrics">
-            <div class="bl-metric">
-              <span class="bl-mv">{{ liveB1.kwhToday ?? '—' }}</span>
-              <span class="bl-mu">kWh</span>
-              <span class="bl-ml">today</span>
-            </div>
-            <div class="bl-metric">
-              <span class="bl-mv">{{ liveB1.runHoursToday ?? '—' }}</span>
-              <span class="bl-mu">hr</span>
-              <span class="bl-ml">run time</span>
-            </div>
-            <div class="bl-metric">
-              <span class="bl-mv">{{ tb1Power }}</span>
-              <span class="bl-mu">kW</span>
-              <span class="bl-ml">now</span>
-            </div>
-            <div class="bl-metric">
-              <span class="bl-mv">{{ liveB1.onOffCount ?? tb1OnOff }}</span>
-              <span class="bl-mu">×</span>
-              <span class="bl-ml">starts</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="bl-sep"></div>
-
-        <!-- TB-02 -->
-        <div class="bl-card" :class="liveB2.status==='RUN'?'bl-run':'bl-stop'">
-          <div class="bl-name-row">
-            <span class="bl-dot"></span>
-            <span class="bl-name">TB-02</span>
-            <span class="bl-badge">{{ liveB2.status || 'N/A' }}</span>
-          </div>
-          <div class="bl-metrics">
-            <div class="bl-metric">
-              <span class="bl-mv">{{ liveB2.kwhToday ?? '—' }}</span>
-              <span class="bl-mu">kWh</span>
-              <span class="bl-ml">today</span>
-            </div>
-            <div class="bl-metric">
-              <span class="bl-mv">{{ liveB2.runHoursToday ?? '—' }}</span>
-              <span class="bl-mu">hr</span>
-              <span class="bl-ml">run time</span>
-            </div>
-            <div class="bl-metric">
-              <span class="bl-mv">{{ tb2Power }}</span>
-              <span class="bl-mu">kW</span>
-              <span class="bl-ml">now</span>
-            </div>
-            <div class="bl-metric">
-              <span class="bl-mv">{{ liveB2.onOffCount ?? tb2OnOff }}</span>
-              <span class="bl-mu">×</span>
-              <span class="bl-ml">starts</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
   </div>
 </template>
 
 <script>
 import { Chart, registerables } from 'chart.js';
-import { mapGetters } from 'vuex';
 Chart.register(...registerables);
 
 // ── Theme definitions ──────────────────────────────────────────────
@@ -318,9 +242,6 @@ export default {
     },
   },
   computed: {
-    ...mapGetters('staKd', ['tb1Power','tb1OnOff','tb2Power','tb2OnOff']),
-    liveB1() { return this.$store.state.staKd.live?.blower1 || {}; },
-    liveB2() { return this.$store.state.staKd.live?.blower2 || {}; },
     t() { return THEMES[this.currentThemeKey]; },
     monthLabel() { const d=new Date(); d.setMonth(d.getMonth()-this.monthOffset); return d.toLocaleString('en',{month:'long',year:'numeric'}); },
     themeStyle() {
@@ -641,7 +562,7 @@ export default {
 /* ── Monthly body: left KPI panel + charts ── */
 .monthly-body   { flex:1; min-height:0; display:flex; gap:7px; }
 .monthly-kpi-col { display:flex; flex-direction:column; gap:5px; width:175px; flex-shrink:0; }
-.monthly-charts  { flex:1; min-height:0; display:flex; flex-direction:column; gap:5px; }
+.monthly-charts  { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:5px; }
 .mkpi-card { display:flex; flex-direction:column; gap:4px; background:var(--ex-card-bg); border-left:3px solid var(--c); padding:9px 11px; border-radius:4px; flex:1; min-height:0; overflow:hidden; }
 .mkpi-card .kpi-tag    { font-size:8px; white-space:normal; line-height:1.2; }
 .mkpi-card .kpi-big    { font-size:20px; }
@@ -656,9 +577,6 @@ export default {
   display:flex; flex-direction:column; gap:4px; min-height:0;
   transition:border-color .3s;
 }
-.chart-sm { flex:1; }
-.chart-md { flex:1.4; }
-.chart-lg { flex:1.1; }
 .chart-hdr {
   display:flex; align-items:center; gap:7px; flex-shrink:0;
   font-size:9px; font-weight:600; color:var(--ex-text); letter-spacing:.07em; text-transform:uppercase;
@@ -679,42 +597,6 @@ export default {
 
 .chart-wrap { flex:1; min-height:0; position:relative; }
 .chart-wrap canvas { position:absolute; inset:0; }
-
-/* ── Blower strip ── */
-.bl-strip {
-  flex-shrink:0;
-  background:var(--ex-card-bg);
-  border:1px solid var(--ex-card-bdr);
-  border-radius:7px;
-  padding:7px 14px;
-  display:flex; flex-direction:column; gap:5px;
-}
-.bl-strip-hdr { display:flex; align-items:center; gap:7px; }
-.bl-strip-title { font-size:9px; font-weight:700; letter-spacing:.1em; color:var(--ex-text-sub); }
-.bl-live-dot {
-  width:6px; height:6px; border-radius:50%;
-  background:#00e87a; box-shadow:0 0 4px #00e87a;
-  animation:blinkdot 2s infinite; flex-shrink:0;
-}
-@keyframes blinkdot { 0%,100%{opacity:1} 50%{opacity:.25} }
-
-.bl-cards { display:flex; align-items:center; gap:0; }
-.bl-card  { flex:1; display:flex; align-items:center; gap:20px; padding:0 10px; }
-.bl-sep   { width:1px; height:36px; background:var(--ex-card-bdr); flex-shrink:0; }
-
-.bl-name-row { display:flex; align-items:center; gap:6px; flex-shrink:0; width:110px; }
-.bl-dot   { width:8px; height:8px; border-radius:50%; background:var(--blc); box-shadow:0 0 5px var(--blc); flex-shrink:0; }
-.bl-name  { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; color:var(--ex-label); }
-.bl-badge { font-size:8px; font-weight:700; letter-spacing:.06em; padding:1px 6px; border-radius:3px; color:var(--blc); background:color-mix(in srgb, var(--blc) 14%, transparent); }
-
-.bl-run  { --blc:#00e87a; }
-.bl-stop { --blc:rgba(255,255,255,.3); }
-
-.bl-metrics { display:flex; align-items:center; gap:22px; }
-.bl-metric  { display:flex; align-items:baseline; gap:2px; }
-.bl-mv { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; color:var(--ex-label); }
-.bl-mu { font-size:9px; font-weight:600; color:var(--ex-text-sub); margin-left:1px; }
-.bl-ml { font-size:8px; color:var(--ex-text-sub); margin-left:2px; }
 
 /* ── Treatment Performance Strip ── */
 .tp-strip {
