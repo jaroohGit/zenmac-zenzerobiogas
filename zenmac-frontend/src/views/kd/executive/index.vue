@@ -54,22 +54,25 @@
           <span class="tp-title">TREATMENT PERFORMANCE</span>
           <span class="tp-sub">{{ viewMode==='annual'?'สรุปรายปี':'สรุปรายเดือน' }}</span>
         </div>
-        <div class="tp-card" v-for="k in activeTreatPerfCards" :key="k.tag" :style="`--c:${k.color}`">
-          <div class="kpi-tag">{{ k.tag }}</div>
-          <div class="kpi-big-row">
-            <span class="tp-big" :style="`color:${k.color}`">{{ k.big }}</span>
-            <span class="tp-unit" :style="`color:${k.color}`">{{ k.unit }}</span>
-            <span class="tp-status" v-if="k.status" :style="`color:${k.color}`">{{ k.status }}</span>
+        <div class="tp-card" v-for="k in activeTreatPerfCards" :key="k.tag" :style="`--c:${k.color};--pct:${k.meter??0}`">
+          <div class="tp-donut-wrap">
+            <div class="tp-donut-inner">
+              <span class="tp-big" :style="`color:${k.color}`">{{ k.big }}</span>
+              <span class="tp-unit" :style="`color:${k.color}`">{{ k.unit }}</span>
+            </div>
           </div>
-          <div class="tp-meter" v-if="k.meter!==undefined">
-            <div class="tp-meter-fill" :style="`width:${k.meter}%;background:${k.meterColor}`"></div>
+          <div class="tp-info">
+            <div class="kpi-tag">{{ k.tag }}</div>
+            <div class="tp-status" v-if="k.status" :style="`color:${k.color}`">{{ k.status }}</div>
+            <div class="kpi-foot">{{ k.foot }}</div>
           </div>
-          <div class="kpi-foot">{{ k.foot }}</div>
         </div>
       </div>
 
       <!-- Right: charts -->
       <div class="monthly-charts">
+
+        <!-- TOP ROW: 2 main charts -->
         <div class="chart-card">
           <div class="chart-hdr">
             <span class="ch-dot" :style="`background:${t.perf}`"></span>{{ viewMode==='annual'?'EFFICIENCY BY MONTH':'TREATMENT EFFICIENCY' }} — m³/kWh
@@ -94,25 +97,33 @@
           </div>
           <div class="chart-wrap"><canvas ref="chartBlower"></canvas></div>
         </div>
+
+        <!-- BOTTOM-LEFT: Flow chart -->
         <div class="chart-card">
           <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.orpS}`"></span>ORP AVERAGE {{ viewMode==='annual'?'/ MONTH':'/ DAY' }} (mV)
+            <span class="ch-dot" :style="`background:${t.serum}`"></span>DAILY FLOW — SERUM &amp; LATEX {{ viewMode==='annual'?'(m³/month)':'(m³/day)' }}
+            <span class="legend">
+              <span class="ls" :style="`background:${t.serum}`"></span>Serum
+              <span class="ls" :style="`background:${t.latex}`"></span>Latex
+            </span>
+          </div>
+          <div class="chart-wrap"><canvas ref="chartMain"></canvas></div>
+        </div>
+
+        <!-- BOTTOM-RIGHT: ORP chart -->
+        <div class="chart-card">
+          <div class="chart-hdr">
+            <span class="ch-dot" :style="`background:${t.orpS}`"></span>ORP — SERUM &amp; LATEX {{ viewMode==='annual'?'(mV/month)':'(mV/day)' }}
             <span class="legend">
               <span class="ls" :style="`background:${t.orpS}`"></span>Serum
               <span class="ls" :style="`background:${t.orpL}`"></span>Latex
-              <span class="ll-dash" :style="`border-color:${t.thresh}`"></span><span :style="`color:${t.thresh}`">{{ threshORP }} mV</span>
+              <span class="ll-dash" :style="`border-color:${t.thresh}`"></span><span :style="`color:${t.thresh};font-size:9px`">{{ threshORP }}</span>
             </span>
             <span class="ctrl-group">Thresh <input type="number" v-model.number="threshORP" step="10" min="10" max="500" class="ctrl-input" :style="`color:${t.thresh};border-color:${t.thresh}40;background:${t.thresh}14`"/> mV</span>
           </div>
           <div class="chart-wrap"><canvas ref="chartORP"></canvas></div>
         </div>
-        <div class="chart-card">
-          <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.kwh}`"></span>{{ viewMode==='annual'?'MONTHLY':'DAILY' }} FLOW (m³) &amp; ENERGY (kWh)
-            <span class="legend"><span class="ls" :style="`background:${t.serum}`"></span>Serum <span class="ls" :style="`background:${t.latex}`"></span>Latex <span class="ll" :style="`background:${t.kwh};margin-left:4px`"></span>kWh</span>
-          </div>
-          <div class="chart-wrap"><canvas ref="chartMain"></canvas></div>
-        </div>
+
       </div>
 
     </div>
@@ -434,6 +445,33 @@ export default {
     },
     activeKpiCards()       { return this.viewMode==='annual' ? this.annualKpiCards      : this.kpiCards; },
     activeTreatPerfCards() { return this.viewMode==='annual' ? this.annualTreatPerfCards : this.treatPerfCards; },
+    orpBarStats() {
+      const s=this.stats, t=this.t;
+      const d=this.monthData.filter(r=>r.flow!==null);
+      const orpOk=d.filter(r=>r.orp_serum>this.threshORP&&r.orp_latex>this.threshORP).length;
+      const ach=d.length?Math.round(orpOk/d.length*100):0;
+      const achColor=ach>=70?t.hOk:ach>=40?t.hWarn:t.hCrit;
+      const sVal=parseFloat(s.avgORPSerum)||0, lVal=parseFloat(s.avgORPLatex)||0;
+      const maxV=Math.max(500,sVal*1.1,lVal*1.1);
+      return { serumAvg:s.avgORPSerum, latexAvg:s.avgORPLatex, serumPct:Math.min(100,sVal/maxV*100).toFixed(1), latexPct:Math.min(100,lVal/maxV*100).toFixed(1), threshPct:Math.min(100,this.threshORP/maxV*100).toFixed(1), ach, achColor, daysAbove:orpOk, daysTotal:d.length };
+    },
+    annualOrpBarStats() {
+      const s=this.annualStats, t=this.t;
+      const d=this.annualData.filter(r=>r.flow!==null);
+      const orpOk=d.filter(r=>r.orp_serum>this.threshORP&&r.orp_latex>this.threshORP).length;
+      const ach=d.length?Math.round(orpOk/d.length*100):0;
+      const achColor=ach>=70?t.hOk:ach>=40?t.hWarn:t.hCrit;
+      const sVal=s.avgOrpS||0, lVal=s.avgOrpL||0;
+      const maxV=Math.max(500,sVal*1.1,lVal*1.1);
+      return { serumAvg:sVal, latexAvg:lVal, serumPct:Math.min(100,sVal/maxV*100).toFixed(1), latexPct:Math.min(100,lVal/maxV*100).toFixed(1), threshPct:Math.min(100,this.threshORP/maxV*100).toFixed(1), ach, achColor, daysAbove:orpOk, daysTotal:d.length };
+    },
+    activeOrpStats() { return this.viewMode==='annual'?this.annualOrpBarStats:this.orpBarStats; },
+    activeFlowStats() {
+      const s=this.viewMode==='annual'?this.annualStats:this.stats;
+      const serum=s.serumTotal||0, latex=s.latexTotal||0, total=serum+latex||1;
+      const kwh=s.kwhTotal||0, eff=kwh?(total/kwh).toFixed(2):'—';
+      return { serum, latex, total, kwh, eff, serumPct:Math.round(serum/total*100), latexPct:Math.round(latex/total*100) };
+    },
   },
   async created() {
     this._chartMain=null; this._chartORP=null; this._chartPerf=null; this._chartBlower=null;
@@ -551,23 +589,21 @@ export default {
           y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+(v/1000).toFixed(0)+'k'},grid:{display:false},border:{color:axisBdr}},
         }},
       });
-      this._chartORP=new Chart(this.$refs.chartORP,{
-        type:'line',data:{labels:cd.labels,datasets:[
-          {label:'Serum ORP',data:cd.orp_serum,borderColor:tk.orpS,backgroundColor:h2r(tk.orpS,.1),borderWidth:2,pointRadius:4,tension:.4,fill:true},
-          {label:'Latex ORP',data:cd.orp_latex,borderColor:tk.orpL,backgroundColor:h2r(tk.orpL,.1),borderWidth:2,pointRadius:4,tension:.4,fill:true},
-          {label:'Threshold 150',data:cd.labels.map(()=>this.threshORP),borderColor:tk.thresh,backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0,fill:false},
-        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{x:sXA,y:scY(v=>v+' mV')}},
-      });
       this._chartMain=new Chart(this.$refs.chartMain,{
         type:'bar',data:{labels:cd.labels,datasets:[
-          {type:'bar',label:'Serum',data:cd.serum,backgroundColor:h2r(tk.serum,.78),stack:'flow',yAxisID:'y',borderRadius:4},
-          {type:'bar',label:'Latex',data:cd.latex,backgroundColor:h2r(tk.latex,.78),stack:'flow',yAxisID:'y',borderRadius:4},
-          {type:'line',label:'kWh',data:cd.kwh,borderColor:tk.kwh,backgroundColor:h2r(tk.kwh,.07),borderWidth:2,pointRadius:4,pointBackgroundColor:tk.kwh,tension:.4,fill:false,yAxisID:'y1'},
+          {label:'Serum',data:cd.serum,backgroundColor:h2r(tk.serum,.78),stack:'flow',borderRadius:4},
+          {label:'Latex',data:cd.latex,backgroundColor:h2r(tk.latex,.78),stack:'flow',borderRadius:4},
         ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
           x:{...sXA,stacked:true},
-          y:{...scY(v=>(v/1000).toFixed(0)+'k m³'),stacked:true,position:'left'},
-          y1:{position:'right',ticks:{color:tk.y1,font:{size:9},callback:v=>(v/1000).toFixed(0)+'k kWh'},grid:{display:false},border:{color:axisBdr}},
+          y:{...scY(v=>(v/1000).toFixed(0)+'k'),stacked:true},
         }},
+      });
+      this._chartORP=new Chart(this.$refs.chartORP,{
+        type:'line',data:{labels:cd.labels,datasets:[
+          {label:'Serum ORP',data:cd.orp_serum,borderColor:tk.orpS,backgroundColor:h2r(tk.orpS,.07),borderWidth:2,pointRadius:4,pointBackgroundColor:tk.orpS,tension:.4,fill:true},
+          {label:'Latex ORP',data:cd.orp_latex,borderColor:tk.orpL,backgroundColor:h2r(tk.orpL,.07),borderWidth:2,pointRadius:4,pointBackgroundColor:tk.orpL,tension:.4,fill:true},
+          {label:'Threshold',data:cd.labels.map(()=>this.threshORP),borderColor:tk.thresh,backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0,fill:false},
+        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{x:sXA,y:scY(v=>v+' mV')}},
       });
     },
     buildMonthlyCharts() {
@@ -595,23 +631,21 @@ export default {
           y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+v.toLocaleString()},grid:{display:false},border:{color:axisBdr}},
         },plugins:{...BASE.plugins,legend:{display:false}}},
       });
+      this._chartMain=new Chart(this.$refs.chartMain,{
+        type:'bar',data:{labels:cd.labels,datasets:[
+          {label:'Serum',data:cd.serum,backgroundColor:h2r(tk.serum,.78),stack:'flow',borderRadius:2},
+          {label:'Latex',data:cd.latex,backgroundColor:h2r(tk.latex,.78),stack:'flow',borderRadius:2},
+        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
+          x:{...sX,stacked:true},
+          y:{...scY(v=>v+' m³'),stacked:true},
+        }},
+      });
       this._chartORP=new Chart(this.$refs.chartORP,{
         type:'line',data:{labels:cd.labels,datasets:[
           {label:'Serum ORP',data:cd.orp_serum,borderColor:tk.orpS,backgroundColor:h2r(tk.orpS,.07),borderWidth:1.5,pointRadius:2,tension:.4,fill:true},
           {label:'Latex ORP',data:cd.orp_latex,borderColor:tk.orpL,backgroundColor:h2r(tk.orpL,.07),borderWidth:1.5,pointRadius:2,tension:.4,fill:true},
-          {label:'Threshold 150',data:cd.labels.map(()=>this.threshORP),borderColor:tk.thresh,backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0,fill:false},
+          {label:'Threshold',data:cd.labels.map(()=>this.threshORP),borderColor:tk.thresh,backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0,fill:false},
         ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{x:sX,y:scY(v=>v+' mV')}},
-      });
-      this._chartMain=new Chart(this.$refs.chartMain,{
-        type:'bar',data:{labels:cd.labels,datasets:[
-          {type:'bar',label:'Serum',data:cd.serum,backgroundColor:h2r(tk.serum,.78),stack:'flow',yAxisID:'y',borderRadius:2},
-          {type:'bar',label:'Latex',data:cd.latex,backgroundColor:h2r(tk.latex,.78),stack:'flow',yAxisID:'y',borderRadius:2},
-          {type:'line',label:'kWh',data:cd.kwh,borderColor:tk.kwh,backgroundColor:h2r(tk.kwh,.07),borderWidth:1.5,pointRadius:2,pointBackgroundColor:tk.kwh,tension:.4,fill:false,yAxisID:'y1'},
-        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
-          x:{...sX,stacked:true},
-          y:{...scY(v=>v+' m³'),stacked:true,position:'left'},
-          y1:{position:'right',ticks:{color:tk.y1,font:{size:9},callback:v=>v+' kWh'},grid:{display:false},border:{color:axisBdr}},
-        }},
       });
     },
   },
@@ -725,27 +759,46 @@ export default {
 .chart-wrap canvas { position:absolute; inset:0; }
 
 /* ── Treatment Performance left column ── */
+/* ── Treatment Performance left column ── */
 .tp-col {
-  display:flex; flex-direction:column; gap:2px;
-  width:168px; flex-shrink:0;
+  display:flex; flex-direction:column; gap:3px;
+  width:150px; flex-shrink:0;
 }
 .tp-col-hdr {
   display:flex; flex-direction:column; gap:2px;
-  padding:3px 8px 5px; flex-shrink:0;
+  padding:2px 8px 4px; flex-shrink:0;
 }
 .tp-title { font-size:8px; font-weight:700; letter-spacing:.1em; color:var(--ex-text-sub); text-transform:uppercase; }
 .tp-sub   { font-size:7px; color:var(--ex-text-sub); opacity:.55; line-height:1.3; }
 .tp-card {
   flex:1; min-height:0; overflow:hidden;
-  padding:7px 10px; display:flex; flex-direction:column; gap:3px;
-  background:linear-gradient(110deg,color-mix(in srgb,var(--c) 10%,var(--ex-card-bg)) 0%,var(--ex-card-bg) 60%);
-  border-left:2px solid var(--c); border-radius:4px;
+  padding:5px 8px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--c) 12%,var(--ex-card-bg)) 0%,var(--ex-card-bg) 65%);
+  border-top:2px solid var(--c); border-radius:5px;
+  transition:filter .15s;
 }
-.tp-big    { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; line-height:1; }
-.tp-unit   { font-size:10px; font-weight:600; margin-left:3px; }
-.tp-status { font-size:7px; font-weight:700; letter-spacing:.07em; margin-left:auto; padding:1px 5px; border-radius:3px; background:color-mix(in srgb,var(--c) 14%,transparent); }
-.tp-meter  { height:3px; background:var(--ex-card-bdr); border-radius:2px; overflow:hidden; margin:2px 0; }
-.tp-meter-fill { height:100%; border-radius:2px; transition:width .6s ease; }
+.tp-card:hover { filter:brightness(1.08); }
+.tp-donut-wrap {
+  flex-shrink:0; width:60px; height:60px; border-radius:50%;
+  background:conic-gradient(var(--c) calc(var(--pct) * 1%),color-mix(in srgb,var(--c) 12%,var(--ex-card-bdr)) 0);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 12px color-mix(in srgb,var(--c) 30%,transparent);
+}
+.tp-donut-inner {
+  width:44px; height:44px; border-radius:50%;
+  background:var(--ex-card-bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+}
+.tp-big  { font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:800; line-height:1; }
+.tp-unit { font-size:8px; font-weight:600; opacity:.72; text-align:center; line-height:1.2; }
+.tp-info { width:100%; display:flex; flex-direction:column; align-items:center; gap:2px; overflow:hidden; }
+.tp-info .kpi-tag  { font-size:10px; text-align:center; }
+.tp-info .kpi-foot { font-size:9px; text-align:center; white-space:normal; line-height:1.3; opacity:.7; }
+.tp-status {
+  font-size:9px; font-weight:700; letter-spacing:.06em;
+  padding:1px 6px; border-radius:3px; display:inline-block;
+  background:color-mix(in srgb,var(--c) 16%,transparent);
+}
 
 /* ── View toggle ── */
 .view-toggle { display:flex; gap:2px; background:var(--ex-mn-bg); border:1px solid var(--ex-mn-bdr); border-radius:6px; padding:2px; }
@@ -759,4 +812,100 @@ export default {
   box-shadow:0 1px 6px color-mix(in srgb,var(--ex-accent) 40%,transparent);
 }
 .vt-btn:not(.active):hover { background:var(--ex-mn-hbg); color:var(--ex-mn-hclr); }
+
+/* ── Summary cards (bottom row) ── */
+.sc-card {
+  background:var(--ex-card-bg);
+  border:1px solid var(--ex-card-bdr);
+  border-radius:8px; padding:7px 11px;
+  display:flex; flex-direction:column; gap:6px; min-height:0; overflow:hidden;
+}
+
+/* ORP card body */
+.sc-orp-body {
+  flex:1; min-height:0;
+  display:flex; gap:12px; align-items:center; overflow:hidden;
+}
+.sc-orp-bars {
+  flex:1; min-height:0;
+  display:flex; flex-direction:column; justify-content:center; gap:8px;
+}
+
+/* Bar rows */
+.sc-bar-row {
+  display:flex; align-items:center; gap:8px;
+}
+.sc-ach-row {
+  display:flex; align-items:center; gap:8px; margin-top:2px;
+  padding-top:6px; border-top:1px solid var(--ex-card-bdr);
+}
+.sc-bar-lbl {
+  font-size:9px; font-weight:700; letter-spacing:.07em;
+  min-width:70px; text-transform:uppercase;
+}
+.sc-bar-val {
+  font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700;
+  min-width:52px; text-align:right; white-space:nowrap;
+}
+.sc-bar-track {
+  flex:1; height:8px; border-radius:4px;
+  background:var(--ex-card-bdr); position:relative; overflow:visible;
+}
+.sc-bar-fill {
+  height:100%; border-radius:4px;
+  transition:width .6s ease;
+  position:absolute; top:0; left:0;
+}
+.sc-bar-thresh {
+  position:absolute; top:-3px; bottom:-3px;
+  width:2px; background:rgba(255,255,255,.45);
+  border-radius:1px; transform:translateX(-50%);
+}
+
+/* Doughnut wrap */
+.sc-donut-wrap {
+  position:relative;
+  width:88px; height:88px; flex-shrink:0;
+}
+.sc-donut-wrap canvas {
+  position:absolute; inset:0; width:100% !important; height:100% !important;
+}
+.sc-donut-center {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  pointer-events:none;
+}
+.sc-donut-val {
+  font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:800; line-height:1;
+}
+.sc-donut-lbl {
+  font-size:8px; font-weight:700; letter-spacing:.1em;
+  color:var(--ex-text-sub); text-transform:uppercase; margin-top:1px;
+}
+
+/* Flow card body */
+.sc-flow-body {
+  flex:1; min-height:0;
+  display:flex; gap:12px; align-items:center; overflow:hidden;
+}
+.sc-flow-stats {
+  flex:1; display:flex; flex-direction:column; justify-content:center; gap:5px;
+}
+.sc-fstat {
+  display:flex; align-items:center; gap:7px;
+  font-size:10px; color:var(--ex-label);
+}
+.sc-fstat--sep {
+  margin-top:4px; padding-top:5px; border-top:1px solid var(--ex-card-bdr);
+}
+.sc-fstat-dot {
+  width:7px; height:7px; border-radius:50%; flex-shrink:0;
+}
+.sc-fstat-val {
+  font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700;
+  margin-left:auto;
+}
+.sc-fstat-pct {
+  font-size:9px; color:var(--ex-text-sub); min-width:30px; text-align:right;
+}
 </style>
