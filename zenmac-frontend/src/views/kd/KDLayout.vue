@@ -154,16 +154,11 @@ import { mapGetters, mapState } from 'vuex';
 const NAV = [
   { to: '/kd/app/overview',     label: 'Overview',          icon: 'bx bx-map-alt',         badge: 'LIVE', badgeClass: 'badge-live' },
   { to: '/kd/app/executive',    label: 'Executive Summary', icon: 'bx bx-bar-chart-alt-2', badge: null },
+  { to: '/kd/app/energy',       label: 'Energy',            icon: 'bx bx-bolt-circle',     badge: null },
   { to: '/kd/app/daily-report', label: 'Daily Report',      icon: 'bx bx-file-blank',       badge: null },
-  {
-    label: 'Process Control', icon: 'bx bx-cog', badge: null,
-    children: [
-      { to: '/kd/app/pump',      label: 'Pump',      icon: 'bx bx-water' },
-      { to: '/kd/app/blower',    label: 'Blower',    icon: 'bx bx-wind' },
-      { to: '/kd/app/energy',    label: 'Energy',    icon: 'bx bx-bolt-circle' },
-      { to: '/kd/app/auto-mode', label: 'Auto Mode', icon: 'bx bx-brain' },
-    ],
-  },
+  { to: '/kd/app/pump',         label: 'Pump',              icon: 'bx bx-water',            badge: null },
+  { to: '/kd/app/blower',       label: 'Blower',            icon: 'bx bx-wind',             badge: null },
+  { to: '/kd/app/auto-mode',    label: 'Auto Mode',         icon: 'bx bx-brain',            badge: null },
 ];
 
 const PAGE_TITLES = {

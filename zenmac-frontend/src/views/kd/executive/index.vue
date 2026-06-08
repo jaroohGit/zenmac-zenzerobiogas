@@ -48,51 +48,23 @@
     <!-- ── MONTHLY BODY: left KPI panel + charts ── -->
     <div class="monthly-body">
 
-      <!-- Left: hero card -->
-      <div class="monthly-kpi-col">
-        <div class="hero-card" v-if="heroCard" :style="`--c:${heroCard.eff.color}`">
-          <div class="hero-tag">TREATMENT EFF</div>
-
-          <!-- Main efficiency number -->
-          <div class="hero-main-row">
-            <span class="hero-big" :style="`color:${heroCard.eff.color}`">{{ heroCard.eff.big }}</span>
-            <span class="hero-unit" :style="`color:${heroCard.eff.color}`">m³/kWh</span>
-            <span class="hero-badge" :style="`color:${heroCard.eff.color};border-color:${heroCard.eff.color}30;background:${heroCard.eff.color}14`">{{ heroCard.eff.status }}</span>
+      <!-- Left: Treatment Performance column -->
+      <div class="tp-col">
+        <div class="tp-col-hdr">
+          <span class="tp-title">TREATMENT PERFORMANCE</span>
+          <span class="tp-sub">{{ viewMode==='annual'?'สรุปรายปี':'สรุปรายเดือน' }}</span>
+        </div>
+        <div class="tp-card" v-for="k in activeTreatPerfCards" :key="k.tag" :style="`--c:${k.color}`">
+          <div class="kpi-tag">{{ k.tag }}</div>
+          <div class="kpi-big-row">
+            <span class="tp-big" :style="`color:${k.color}`">{{ k.big }}</span>
+            <span class="tp-unit" :style="`color:${k.color}`">{{ k.unit }}</span>
+            <span class="tp-status" v-if="k.status" :style="`color:${k.color}`">{{ k.status }}</span>
           </div>
-          <div class="hero-meter">
-            <div class="hero-meter-fill" :style="`width:${heroCard.eff.meter}%;background:${heroCard.eff.meterColor}`"></div>
+          <div class="tp-meter" v-if="k.meter!==undefined">
+            <div class="tp-meter-fill" :style="`width:${k.meter}%;background:${k.meterColor}`"></div>
           </div>
-          <div class="hero-sub">{{ heroCard.eff.meter }}% of target 2.0 m³/kWh</div>
-
-          <!-- 2×2 detail grid -->
-          <div class="hero-grid">
-            <div class="hero-sec">
-              <div class="hero-sec-lbl">FLOW</div>
-              <div class="hero-sec-val" :style="`color:${t.accent}`">{{ fmt0(heroCard.flow) }}<span class="hero-sec-u">m³</span></div>
-              <div class="hero-sec-chip"><span :style="`color:${t.serum}`">Serum</span> {{ fmt0(heroCard.serum) }}</div>
-              <div class="hero-sec-chip"><span :style="`color:${t.latex}`">Latex</span> {{ fmt0(heroCard.latex) }}</div>
-            </div>
-            <div class="hero-sec">
-              <div class="hero-sec-lbl">ENERGY</div>
-              <div class="hero-sec-val" :style="`color:${t.kwh}`">{{ fmt0(heroCard.kwh) }}<span class="hero-sec-u">kWh</span></div>
-              <div class="hero-sec-chip"><span :style="`color:${t.kwh}`">TB-01</span> {{ fmt0(heroCard.kwh1) }}</div>
-              <div class="hero-sec-chip"><span :style="`color:${t.cost}`">TB-02</span> {{ fmt0(heroCard.kwh2) }}</div>
-            </div>
-            <div class="hero-sec">
-              <div class="hero-sec-lbl">AERATION COST</div>
-              <div class="hero-sec-val" :style="`color:${heroCard.cost.color}`">{{ heroCard.cost.big }}<span class="hero-sec-u">฿/m³</span></div>
-              <div class="hero-sec-chip">Est: <span :style="`color:${t.cost}`">{{ fmt0(heroCard.estCost) }} ฿</span></div>
-              <div class="hero-sec-chip" :style="`color:${t.hWarn}`">Rate {{ costRate }} ฿/kWh</div>
-            </div>
-            <div class="hero-sec">
-              <div class="hero-sec-lbl">ORP AVERAGE</div>
-              <div class="hero-sec-val" :style="`color:${t.orpS}`">{{ heroCard.orpS }}<span class="hero-sec-u">mV</span></div>
-              <div class="hero-sec-chip"><span :style="`color:${t.orpS}`">Serum</span> {{ heroCard.orpS }} mV</div>
-              <div class="hero-sec-chip"><span :style="`color:${t.orpL}`">Latex</span> {{ heroCard.orpL }} mV</div>
-            </div>
-          </div>
-
-          <div class="hero-foot">Flow ÷ Energy — Higher is Better · Target ≥ 2.0 m³/kWh</div>
+          <div class="kpi-foot">{{ k.foot }}</div>
         </div>
       </div>
 
@@ -104,7 +76,9 @@
             <span class="legend">
               <span class="ls" :style="`background:${t.perf}`"></span>m³/kWh
               <span class="ll" :style="`background:${t.hWarn};margin-left:4px`"></span>฿/m³
+              <span class="ll-dash" :style="`border-color:${t.thresh}`"></span><span :style="`color:${t.thresh}`">{{ threshEff }}</span>
             </span>
+            <span class="ctrl-group">Thresh <input type="number" v-model.number="threshEff" step="0.1" min="0.1" max="10" class="ctrl-input" :style="`color:${t.thresh};border-color:${t.thresh}40;background:${t.thresh}14`"/> m³/kWh</span>
           </div>
           <div class="chart-wrap"><canvas ref="chartPerf"></canvas></div>
         </div>
@@ -123,7 +97,12 @@
         <div class="chart-card">
           <div class="chart-hdr">
             <span class="ch-dot" :style="`background:${t.orpS}`"></span>ORP AVERAGE {{ viewMode==='annual'?'/ MONTH':'/ DAY' }} (mV)
-            <span class="legend"><span class="ls" :style="`background:${t.orpS}`"></span>Serum <span class="ls" :style="`background:${t.orpL}`"></span>Latex</span>
+            <span class="legend">
+              <span class="ls" :style="`background:${t.orpS}`"></span>Serum
+              <span class="ls" :style="`background:${t.orpL}`"></span>Latex
+              <span class="ll-dash" :style="`border-color:${t.thresh}`"></span><span :style="`color:${t.thresh}`">{{ threshORP }} mV</span>
+            </span>
+            <span class="ctrl-group">Thresh <input type="number" v-model.number="threshORP" step="10" min="10" max="500" class="ctrl-input" :style="`color:${t.thresh};border-color:${t.thresh}40;background:${t.thresh}14`"/> mV</span>
           </div>
           <div class="chart-wrap"><canvas ref="chartORP"></canvas></div>
         </div>
@@ -137,7 +116,6 @@
       </div>
 
     </div>
-
 
   </div>
 </template>
@@ -264,19 +242,30 @@ const SCALE_X = {
   ticks:{color:'',font:{size:8},maxTicksLimit:31,autoSkip:false,maxRotation:0},
   grid:{display:false},
 };
-const SCALE_X_H = { ticks:{display:false}, grid:{display:false} };
 const fitY = s => { s.width=52; };
 
 export default {
   name: 'KDExecutive',
   data() {
-    return { monthOffset:0, monthData:[], annualData:[], viewMode:'monthly', costRate:4.50, currentThemeKey:'slate', THEMES };
+    return { monthOffset:0, monthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, currentThemeKey:'slate', THEMES };
   },
   watch: {
     costRate() {
       const cd = this.viewMode==='annual' ? this.getAnnualChartData() : this.getChartData();
       if(this._chartBlower) { this._chartBlower.data.datasets[2].data=cd.cost; this._chartBlower.update('none'); }
       if(this._chartPerf)   { this._chartPerf.data.datasets[1].data=cd.costPerM3; this._chartPerf.update('none'); }
+    },
+    threshEff() {
+      if(this._chartPerf) {
+        this._chartPerf.data.datasets[2].data=this._chartPerf.data.labels.map(()=>this.threshEff);
+        this._chartPerf.update('none');
+      }
+    },
+    threshORP() {
+      if(this._chartORP) {
+        this._chartORP.data.datasets[2].data=this._chartORP.data.labels.map(()=>this.threshORP);
+        this._chartORP.update('none');
+      }
     },
     viewMode() {
       this.destroyCharts();
@@ -355,7 +344,7 @@ export default {
           ],
         },
         {
-          tag:'TREATMENT EFF', big:s.efficiency, unit:'m³/kWh', color:t.perf,
+          tag:'PERFORMANCE', big:s.efficiency, unit:'m³/kWh', color:t.perf,
           chips:[],
           foot:'Flow ÷ Energy — Higher is Better',
         },
@@ -373,49 +362,6 @@ export default {
         },
       ];
     },
-    monthlyKpiCards() {
-      const md=this.monthData, t=this.t;
-      const d=md.filter(r=>r.flow!==null);
-      if(!d.length) return [];
-      const totalFlow   = Math.round(d.reduce((a,r)=>a+r.flow,0));
-      const serumTotal  = Math.round(d.reduce((a,r)=>a+(r.serum||0),0));
-      const latexTotal  = Math.round(d.reduce((a,r)=>a+(r.latex||0),0));
-      const kwhTotal    = Math.round(d.reduce((a,r)=>a+(r.kwh||0),0));
-      const avgORPSerum = Math.round(d.reduce((a,r)=>a+(r.orpSerum||0),0)/d.length);
-      const avgORPLatex = Math.round(d.reduce((a,r)=>a+(r.orpLatex||0),0)/d.length);
-      const eff         = kwhTotal?((totalFlow/kwhTotal).toFixed(2)):'—';
-      const orpAvg      = Math.round((avgORPSerum+avgORPLatex)/2);
-      return [
-        {
-          tag:'PERFORMANCE', big:eff, unit:'m³/kWh', color:t.perf, flex:1,
-          chips:[], foot:'Flow ÷ Energy — Higher is Better',
-        },
-        {
-          tag:'BLOWER ENERGY', big:this.fmt0(kwhTotal), unit:'kWh', color:t.kwh, flex:1,
-          chips:[
-            {label:'TB-01', val:`${this.fmt0(Math.round(kwhTotal*.52))} kWh`, color:t.kwh},
-            {label:'TB-02', val:`${this.fmt0(Math.round(kwhTotal*.48))} kWh`, color:t.cost},
-          ],
-          foot:`TB-01 52% · TB-02 48%`,
-        },
-        {
-          tag:'ORP AVERAGE', big:orpAvg, unit:'mV', color:t.orpS, flex:1,
-          chips:[
-            {label:'Serum', val:`${avgORPSerum} mV`, color:t.orpS},
-            {label:'Latex', val:`${avgORPLatex} mV`, color:t.orpL},
-          ],
-        },
-        {
-          tag:'FLOW & ENERGY', big:this.fmt0(totalFlow), unit:'m³', color:t.accent, flex:1.5,
-          chips:[
-            {label:'Serum',  val:this.fmt0(serumTotal),  color:t.serum},
-            {label:'Latex',  val:this.fmt0(latexTotal),  color:t.latex},
-            {label:'Energy', val:`${this.fmt0(kwhTotal)} kWh`, color:t.kwh},
-          ],
-          foot:`B1: ${this.fmt0(Math.round(kwhTotal*.52))} · B2: ${this.fmt0(Math.round(kwhTotal*.48))} kWh`,
-        },
-      ];
-    },
     treatPerfCards() {
       const s=this.stats, t=this.t;
       const d=this.monthData.filter(r=>r.flow!==null&&r.kwh!==null);
@@ -429,14 +375,16 @@ export default {
       const orpOk     = d.filter(r=>r.orp_serum>150&&r.orp_latex>150).length;
       const orpAch    = Math.round(orpOk/d.length*100);
       const orpColor  = orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit;
-      const bestDay   = d.reduce((a,r)=>(r.flow&&r.kwh&&r.flow/r.kwh>a.r)?{day:r.day,r:r.flow/r.kwh}:a,{day:'—',r:0});
-      const worstDay  = d.reduce((a,r)=>(r.flow&&r.kwh&&r.kwh/r.flow>a.r)?{day:r.day,r:r.kwh/r.flow}:a,{day:'—',r:0});
+      const avgOrpS   = parseFloat(s.avgORPSerum) || 0;
+      const kwoSVal   = avgOrpS ? s.kwhTotal / avgOrpS : null;
+      const kwoS      = kwoSVal !== null ? kwoSVal.toFixed(2) : '—';
+      const kwoSMeter = kwoSVal !== null ? Math.max(0,Math.min(100,Math.round((1-kwoSVal/15)*100))) : 0;
+      const kwoSColor = kwoSMeter>=70?t.hOk:kwoSMeter>=40?t.hWarn:t.hCrit;
       return [
         { tag:'TREAT. EFFICIENCY', big:effVal.toFixed(2),  unit:'m³/kWh', color:effColor,  foot:'Flow ÷ Energy — Higher is Better', meter:effMeter,  meterColor:effColor,  status:effMeter>=100?'OPTIMAL':effMeter>=60?'MODERATE':'NEEDS WORK' },
         { tag:'AERATION COST',     big:costVal.toFixed(1), unit:'฿/m³',   color:costColor, foot:`Rate ${this.costRate} ฿/kWh`,      meter:costMeter, meterColor:costColor, status:costMeter>=60?'EFFICIENT':costMeter>=30?'MODERATE':'HIGH COST' },
+        { tag:'kWh/ORP-SERUM',     big:kwoS, unit:'kWh/mV', color:kwoSColor, foot:`Avg ORP Serum: ${s.avgORPSerum} mV`, meter:kwoSMeter, meterColor:kwoSColor, status:kwoSMeter>=70?'EFFICIENT':kwoSMeter>=40?'MODERATE':'REVIEW' },
         { tag:'ORP ACHIEVEMENT',   big:orpAch,    unit:'%',      color:orpColor,  foot:`${orpOk}/${d.length} days ORP > 150 mV` },
-        { tag:'BEST EFF. DAY',     big:`D${bestDay.day}`,  unit:'', color:t.hOk,   foot:`${bestDay.r.toFixed(2)} m³/kWh` },
-        { tag:'WORST EFF. DAY',    big:`D${worstDay.day}`, unit:'', color:t.hCrit, foot:`${worstDay.r.toFixed(2)} kWh/m³` },
       ];
     },
     annualStats() {
@@ -455,7 +403,7 @@ export default {
       return [
         { tag:'ANNUAL FLOW',       big:this.fmt0(s.totalFlow),   unit:'m³',   color:t.accent, chips:[{label:'Serum',val:this.fmt0(s.serumTotal),color:t.serum},{label:'Latex',val:this.fmt0(s.latexTotal),color:t.latex}] },
         { tag:'ANNUAL ENERGY',     big:this.fmt0(s.kwhTotal),    unit:'kWh',  color:t.kwh,    chips:[{label:'TB-01',val:this.fmt0(Math.round(s.kwhTotal*.52)),color:t.kwh},{label:'TB-02',val:this.fmt0(Math.round(s.kwhTotal*.48)),color:t.cost}] },
-        { tag:'TREATMENT EFF',     big:eff,                       unit:'m³/kWh',color:t.perf,  chips:[], foot:'Annual Flow ÷ Energy' },
+        { tag:'AVG EFFICIENCY',    big:eff,                       unit:'m³/kWh',color:t.perf,  chips:[], foot:'Annual Flow ÷ Energy' },
         { tag:'EST. ANNUAL COST',  big:this.fmt0(s.totalCost),   unit:'฿',    color:t.cost,   chips:[], foot:`${s.months} months · ${this.costRate} ฿/kWh` },
         { tag:'ORP ACHIEVEMENT',   big:orpAch,                   unit:'%',    color:orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit, chips:[{label:'Serum avg',val:s.avgOrpS+' mV',color:t.orpS},{label:'Latex avg',val:s.avgOrpL+' mV',color:t.orpL}] },
       ];
@@ -473,32 +421,19 @@ export default {
       const orpOk=d.filter(r=>r.orp_serum>150&&r.orp_latex>150).length;
       const orpAch=Math.round(orpOk/d.length*100);
       const orpColor=orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit;
-      const bestM=d.reduce((a,r)=>(r.flow&&r.kwh&&r.flow/r.kwh>a.r)?{label:r.label,r:r.flow/r.kwh}:a,{label:'—',r:0});
-      const worstM=d.reduce((a,r)=>(r.flow&&r.kwh&&r.kwh/r.flow>a.r)?{label:r.label,r:r.kwh/r.flow}:a,{label:'—',r:0});
+      const kwoSVal   = s.avgOrpS ? s.kwhTotal / s.avgOrpS : null;
+      const kwoS      = kwoSVal !== null ? kwoSVal.toFixed(2) : '—';
+      const kwoSMeter = kwoSVal !== null ? Math.max(0,Math.min(100,Math.round((1-kwoSVal/15)*100))) : 0;
+      const kwoSColor = kwoSMeter>=70?t.hOk:kwoSMeter>=40?t.hWarn:t.hCrit;
       return [
         { tag:'ANNUAL EFFICIENCY', big:effVal.toFixed(2),  unit:'m³/kWh', color:effColor,  foot:'Annual Flow ÷ Energy', meter:effMeter,  meterColor:effColor,  status:effMeter>=100?'OPTIMAL':effMeter>=60?'MODERATE':'NEEDS WORK' },
         { tag:'AVG AERATION COST', big:costVal.toFixed(1), unit:'฿/m³',   color:costColor, foot:`Rate ${this.costRate} ฿/kWh`,  meter:costMeter, meterColor:costColor, status:costMeter>=60?'EFFICIENT':costMeter>=30?'MODERATE':'HIGH COST' },
+        { tag:'kWh/ORP-SERUM',     big:kwoS, unit:'kWh/mV', color:kwoSColor, foot:`Avg ORP Serum: ${s.avgOrpS} mV`, meter:kwoSMeter, meterColor:kwoSColor, status:kwoSMeter>=70?'EFFICIENT':kwoSMeter>=40?'MODERATE':'REVIEW' },
         { tag:'ORP ACHIEVEMENT',   big:orpAch, unit:'%',  color:orpColor, foot:`${orpOk}/${d.length} months ORP > 150 mV` },
-        { tag:'BEST MONTH',        big:bestM.label,  unit:'', color:t.hOk,   foot:`${bestM.r.toFixed(2)} m³/kWh` },
-        { tag:'WORST MONTH',       big:worstM.label, unit:'', color:t.hCrit, foot:`${worstM.r.toFixed(2)} kWh/m³` },
       ];
     },
     activeKpiCards()       { return this.viewMode==='annual' ? this.annualKpiCards      : this.kpiCards; },
     activeTreatPerfCards() { return this.viewMode==='annual' ? this.annualTreatPerfCards : this.treatPerfCards; },
-    heroCard() {
-      const tp = this.activeTreatPerfCards;
-      if (!tp.length) return null;
-      const isAnnual = this.viewMode === 'annual';
-      const s = isAnnual ? this.annualStats : this.stats;
-      const flow  = s.totalFlow  || 0;
-      const serum = s.serumTotal || 0;
-      const latex = s.latexTotal || 0;
-      const kwh   = s.kwhTotal   || 0;
-      const estCost = isAnnual ? (s.totalCost || 0) : (parseInt(s.totalCost) || Math.round(kwh * this.costRate));
-      const orpS  = isAnnual ? (s.avgOrpS || '—') : (s.avgORPSerum || '—');
-      const orpL  = isAnnual ? (s.avgOrpL || '—') : (s.avgORPLatex || '—');
-      return { eff: tp[0], cost: tp[1], flow, serum, latex, kwh, estCost, orpS, orpL, kwh1: Math.round(kwh*.52), kwh2: Math.round(kwh*.48) };
-    },
   },
   async created() {
     this._chartMain=null; this._chartORP=null; this._chartPerf=null; this._chartBlower=null;
@@ -598,6 +533,7 @@ export default {
         type:'bar',data:{labels:cd.labels,datasets:[
           {type:'bar',  label:'m³/kWh', data:cd.treatEff,  backgroundColor:h2r(tk.perf,.75), borderRadius:4, yAxisID:'y',  order:2},
           {type:'line', label:'฿/m³',   data:cd.costPerM3, borderColor:tk.hWarn, backgroundColor:h2r(tk.hWarn,.06), borderWidth:2, pointRadius:4, pointBackgroundColor:tk.hWarn, tension:.4, fill:false, yAxisID:'y1', order:1},
+          {type:'line', label:'Threshold 1.5', data:cd.labels.map(()=>this.threshEff), borderColor:tk.thresh, backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], pointRadius:0, tension:0, fill:false, yAxisID:'y', order:3},
         ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
           x:sXA,
           y: scY(v=>v.toFixed(2),tk.perf),
@@ -619,6 +555,7 @@ export default {
         type:'line',data:{labels:cd.labels,datasets:[
           {label:'Serum ORP',data:cd.orp_serum,borderColor:tk.orpS,backgroundColor:h2r(tk.orpS,.1),borderWidth:2,pointRadius:4,tension:.4,fill:true},
           {label:'Latex ORP',data:cd.orp_latex,borderColor:tk.orpL,backgroundColor:h2r(tk.orpL,.1),borderWidth:2,pointRadius:4,tension:.4,fill:true},
+          {label:'Threshold 150',data:cd.labels.map(()=>this.threshORP),borderColor:tk.thresh,backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0,fill:false},
         ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{x:sXA,y:scY(v=>v+' mV')}},
       });
       this._chartMain=new Chart(this.$refs.chartMain,{
@@ -640,8 +577,9 @@ export default {
         type:'bar',data:{labels:cd.labels,datasets:[
           {type:'bar',  label:'m³/kWh', data:cd.treatEff,  backgroundColor:h2r(tk.perf,.72), borderRadius:2, yAxisID:'y',  order:2},
           {type:'line', label:'฿/m³',   data:cd.costPerM3, borderColor:tk.hWarn, backgroundColor:h2r(tk.hWarn,.06), borderWidth:1.5, pointRadius:0, tension:.4, fill:false, yAxisID:'y1', order:1},
+          {type:'line', label:'Threshold 1.5', data:cd.labels.map(()=>this.threshEff), borderColor:tk.thresh, backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], pointRadius:0, tension:0, fill:false, yAxisID:'y', order:3},
         ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
-          x:SCALE_X_H,
+          x:sX,
           y: scY(v=>v.toFixed(2),tk.perf),
           y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+v},grid:{display:false},border:{color:axisBdr}},
         }},
@@ -652,7 +590,7 @@ export default {
           {label:'TB-02',data:cd.kwh2,backgroundColor:h2r(tk.cost,.72),borderRadius:2,stack:'bl',yAxisID:'y'},
           {type:'line',label:'Cost ฿',data:cd.cost,borderColor:tk.hWarn,backgroundColor:h2r(tk.hWarn,.08),borderWidth:1.5,pointRadius:2,pointBackgroundColor:tk.hWarn,tension:.4,fill:false,yAxisID:'y1'},
         ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
-          x:SCALE_X_H,
+          x:sX,
           y:{...scY(v=>v+' kWh'),stacked:true},
           y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+v.toLocaleString()},grid:{display:false},border:{color:axisBdr}},
         },plugins:{...BASE.plugins,legend:{display:false}}},
@@ -661,7 +599,8 @@ export default {
         type:'line',data:{labels:cd.labels,datasets:[
           {label:'Serum ORP',data:cd.orp_serum,borderColor:tk.orpS,backgroundColor:h2r(tk.orpS,.07),borderWidth:1.5,pointRadius:2,tension:.4,fill:true},
           {label:'Latex ORP',data:cd.orp_latex,borderColor:tk.orpL,backgroundColor:h2r(tk.orpL,.07),borderWidth:1.5,pointRadius:2,tension:.4,fill:true},
-        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{x:SCALE_X_H,y:scY(v=>v+' mV')}},
+          {label:'Threshold 150',data:cd.labels.map(()=>this.threshORP),borderColor:tk.thresh,backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0,fill:false},
+        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{x:sX,y:scY(v=>v+' mV')}},
       });
       this._chartMain=new Chart(this.$refs.chartMain,{
         type:'bar',data:{labels:cd.labels,datasets:[
@@ -752,40 +691,9 @@ export default {
 .h-warn { color:var(--ex-h-warn) !important; }
 .h-crit { color:var(--ex-h-crit) !important; }
 
-/* ── Monthly body: left KPI panel + charts ── */
+/* ── Monthly body: charts ── */
 .monthly-body   { flex:1; min-height:0; display:flex; gap:7px; }
-.monthly-kpi-col { display:flex; flex-direction:column; gap:5px; width:192px; flex-shrink:0; }
 .monthly-charts  { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:5px; }
-/* ── Hero card ── */
-.hero-card {
-  flex:1; min-height:0;
-  display:flex; flex-direction:column; gap:6px;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--c) 12%, var(--ex-card-bg)) 0%, var(--ex-card-bg) 55%);
-  border:1px solid color-mix(in srgb, var(--c) 30%, var(--ex-card-bdr));
-  border-left:3px solid var(--c);
-  border-radius:10px; padding:12px 13px;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--c) 10%, transparent), inset 0 0 30px color-mix(in srgb, var(--c) 4%, transparent);
-  overflow:hidden;
-}
-.hero-tag { font-size:9px; font-weight:700; letter-spacing:.12em; color:var(--ex-label); text-transform:uppercase; }
-.hero-main-row { display:flex; align-items:baseline; gap:5px; flex-wrap:wrap; }
-.hero-big { font-family:'JetBrains Mono',monospace; font-size:34px; font-weight:800; line-height:1; }
-.hero-unit { font-size:12px; font-weight:600; }
-.hero-badge { font-size:8px; font-weight:700; letter-spacing:.07em; padding:2px 7px; border-radius:3px; border:1px solid; margin-left:auto; align-self:center; }
-.hero-meter { height:4px; background:rgba(255,255,255,.06); border-radius:2px; overflow:hidden; flex-shrink:0; }
-.hero-meter-fill { height:100%; border-radius:2px; transition:width .6s ease; }
-.hero-sub { font-size:7px; color:var(--ex-label); text-align:right; margin-top:-2px; }
-.hero-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; flex:1; min-height:0; }
-.hero-sec {
-  background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.05);
-  border-radius:6px; padding:7px 9px;
-  display:flex; flex-direction:column; gap:2px; overflow:hidden; min-height:0;
-}
-.hero-sec-lbl { font-size:7px; font-weight:700; letter-spacing:.09em; color:var(--ex-label); text-transform:uppercase; margin-bottom:1px; }
-.hero-sec-val { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; display:flex; align-items:baseline; gap:2px; }
-.hero-sec-u   { font-size:8px; font-weight:400; color:var(--ex-text-sub); }
-.hero-sec-chip { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--ex-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.hero-foot { font-size:7px; color:var(--ex-label); padding-top:4px; border-top:1px solid rgba(255,255,255,.05); margin-top:auto; flex-shrink:0; }
 
 .chart-card {
   background:var(--ex-card-bg);
@@ -802,6 +710,7 @@ export default {
 .legend { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:9px; color:var(--ex-text-sub); }
 .ls { width:8px; height:8px; border-radius:2px; display:inline-block; opacity:.85; transition:background .3s; }
 .ll { width:14px; height:2.5px; border-radius:2px; display:inline-block; opacity:.85; transition:background .3s; }
+.ll-dash { width:14px; display:inline-block; border-top:2px dashed; opacity:.85; vertical-align:middle; }
 
 /* Controls */
 .ctrl-group { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:9px; color:var(--ex-text-sub); }
@@ -815,6 +724,28 @@ export default {
 .chart-wrap { flex:1; min-height:0; position:relative; }
 .chart-wrap canvas { position:absolute; inset:0; }
 
+/* ── Treatment Performance left column ── */
+.tp-col {
+  display:flex; flex-direction:column; gap:2px;
+  width:168px; flex-shrink:0;
+}
+.tp-col-hdr {
+  display:flex; flex-direction:column; gap:2px;
+  padding:3px 8px 5px; flex-shrink:0;
+}
+.tp-title { font-size:8px; font-weight:700; letter-spacing:.1em; color:var(--ex-text-sub); text-transform:uppercase; }
+.tp-sub   { font-size:7px; color:var(--ex-text-sub); opacity:.55; line-height:1.3; }
+.tp-card {
+  flex:1; min-height:0; overflow:hidden;
+  padding:7px 10px; display:flex; flex-direction:column; gap:3px;
+  background:linear-gradient(110deg,color-mix(in srgb,var(--c) 10%,var(--ex-card-bg)) 0%,var(--ex-card-bg) 60%);
+  border-left:2px solid var(--c); border-radius:4px;
+}
+.tp-big    { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; line-height:1; }
+.tp-unit   { font-size:10px; font-weight:600; margin-left:3px; }
+.tp-status { font-size:7px; font-weight:700; letter-spacing:.07em; margin-left:auto; padding:1px 5px; border-radius:3px; background:color-mix(in srgb,var(--c) 14%,transparent); }
+.tp-meter  { height:3px; background:var(--ex-card-bdr); border-radius:2px; overflow:hidden; margin:2px 0; }
+.tp-meter-fill { height:100%; border-radius:2px; transition:width .6s ease; }
 
 /* ── View toggle ── */
 .view-toggle { display:flex; gap:2px; background:var(--ex-mn-bg); border:1px solid var(--ex-mn-bdr); border-radius:6px; padding:2px; }

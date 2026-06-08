@@ -117,7 +117,7 @@ export default [
       {
         path: "energy",
         name: "kd-energy",
-        component: () => import("../views/sta-kd/energy/index.vue"),
+        component: () => import("../views/kd/energy/index.vue"),
         meta: { title: "Energy" },
       },
       {
