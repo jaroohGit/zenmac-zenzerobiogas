@@ -325,12 +325,16 @@ export default {
       const serumTotal=d.reduce((a,r)=>a+r.serum,0);
       const latexTotal=d.reduce((a,r)=>a+r.latex,0);
       const kwhTotal=d.reduce((a,r)=>a+r.kwh,0);
-      const avgORPSerum=(d.reduce((a,r)=>a+r.orp_serum,0)/d.length).toFixed(0);
-      const avgORPLatex=(d.reduce((a,r)=>a+r.orp_latex,0)/d.length).toFixed(0);
+      const kwh1Total=d.reduce((a,r)=>a+(r.kwh1||0),0);
+      const kwh2Total=d.reduce((a,r)=>a+(r.kwh2||0),0);
+      const orpSData=d.filter(r=>r.orp_serum!=null);
+      const orpLData=d.filter(r=>r.orp_latex!=null);
+      const avgORPSerum=orpSData.length?(orpSData.reduce((a,r)=>a+r.orp_serum,0)/orpSData.length).toFixed(0):'—';
+      const avgORPLatex=orpLData.length?(orpLData.reduce((a,r)=>a+r.orp_latex,0)/orpLData.length).toFixed(0):'—';
       const efficiency=kwhTotal?(totalFlow/kwhTotal).toFixed(2):'—';
       const totalCost=(kwhTotal*this.costRate).toFixed(0);
       const best=d.reduce((a,r)=>r.flow>a.flow?r:a,d[0]);
-      return {totalFlow,serumTotal,latexTotal,kwhTotal,avgORPSerum,avgORPLatex,efficiency,totalCost,bestDay:best};
+      return {totalFlow,serumTotal,latexTotal,kwhTotal,kwh1Total,kwh2Total,avgORPSerum,avgORPLatex,efficiency,totalCost,bestDay:best};
     },
     kpiCards() {
       const s=this.stats, t=this.t;
@@ -350,8 +354,8 @@ export default {
         {
           tag:'TOTAL ENERGY', big:this.fmt0(s.kwhTotal), unit:'kWh', color:t.kwh,
           chips:[
-            {label:'TB-01', val:this.fmt0(Math.round(s.kwhTotal*.52)), color:t.kwh},
-            {label:'TB-02', val:this.fmt0(Math.round(s.kwhTotal*.48)), color:t.cost},
+            {label:'TB-01', val:this.fmt0(s.kwh1Total), color:t.kwh},
+            {label:'TB-02', val:this.fmt0(s.kwh2Total), color:t.cost},
           ],
         },
         {
@@ -399,12 +403,18 @@ export default {
       ];
     },
     annualStats() {
-      const d=this.annualData.filter(r=>r.flow!==null);
+      const d=this.annualData.filter(r=>r.flow!=null||(r.serum!=null||r.latex!=null)).map(r=>({...r,flow:r.flow??((r.serum||0)+(r.latex||0))}));
       if(!d.length) return {totalFlow:0,kwhTotal:0,totalCost:'—'};
       const totalFlow=d.reduce((a,r)=>a+r.flow,0);
       const kwhTotal=d.reduce((a,r)=>a+r.kwh,0);
+      const kwh1Total=d.reduce((a,r)=>a+(r.kwh1||0),0);
+      const kwh2Total=d.reduce((a,r)=>a+(r.kwh2||0),0);
       const totalCost=Math.round(kwhTotal*this.costRate);
-      return {totalFlow,kwhTotal,totalCost,serumTotal:d.reduce((a,r)=>a+r.serum,0),latexTotal:d.reduce((a,r)=>a+r.latex,0),avgOrpS:Math.round(d.reduce((a,r)=>a+r.orp_serum,0)/d.length),avgOrpL:Math.round(d.reduce((a,r)=>a+r.orp_latex,0)/d.length),months:d.length};
+      const aOrpS=d.filter(r=>r.orp_serum!=null);
+      const aOrpL=d.filter(r=>r.orp_latex!=null);
+      const avgOrpS=aOrpS.length?Math.round(aOrpS.reduce((a,r)=>a+r.orp_serum,0)/aOrpS.length):null;
+      const avgOrpL=aOrpL.length?Math.round(aOrpL.reduce((a,r)=>a+r.orp_latex,0)/aOrpL.length):null;
+      return {totalFlow,kwhTotal,kwh1Total,kwh2Total,totalCost,serumTotal:d.reduce((a,r)=>a+r.serum,0),latexTotal:d.reduce((a,r)=>a+r.latex,0),avgOrpS,avgOrpL,months:d.length};
     },
     annualKpiCards() {
       const s=this.annualStats, t=this.t;
@@ -413,7 +423,7 @@ export default {
       const orpAch=s.months?Math.round(orpOk/s.months*100):0;
       return [
         { tag:'ANNUAL FLOW',       big:this.fmt0(s.totalFlow),   unit:'m³',   color:t.accent, chips:[{label:'Serum',val:this.fmt0(s.serumTotal),color:t.serum},{label:'Latex',val:this.fmt0(s.latexTotal),color:t.latex}] },
-        { tag:'ANNUAL ENERGY',     big:this.fmt0(s.kwhTotal),    unit:'kWh',  color:t.kwh,    chips:[{label:'TB-01',val:this.fmt0(Math.round(s.kwhTotal*.52)),color:t.kwh},{label:'TB-02',val:this.fmt0(Math.round(s.kwhTotal*.48)),color:t.cost}] },
+        { tag:'ANNUAL ENERGY',     big:this.fmt0(s.kwhTotal),    unit:'kWh',  color:t.kwh,    chips:[{label:'TB-01',val:this.fmt0(s.kwh1Total),color:t.kwh},{label:'TB-02',val:this.fmt0(s.kwh2Total),color:t.cost}] },
         { tag:'AVG EFFICIENCY',    big:eff,                       unit:'m³/kWh',color:t.perf,  chips:[], foot:'Annual Flow ÷ Energy' },
         { tag:'EST. ANNUAL COST',  big:this.fmt0(s.totalCost),   unit:'฿',    color:t.cost,   chips:[], foot:`${s.months} months · ${this.costRate} ฿/kWh` },
         { tag:'ORP ACHIEVEMENT',   big:orpAch,                   unit:'%',    color:orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit, chips:[{label:'Serum avg',val:s.avgOrpS+' mV',color:t.orpS},{label:'Latex avg',val:s.avgOrpL+' mV',color:t.orpL}] },
@@ -421,7 +431,7 @@ export default {
     },
     annualTreatPerfCards() {
       const s=this.annualStats, t=this.t;
-      const d=this.annualData.filter(r=>r.flow!==null);
+      const d=this.annualData.filter(r=>r.flow!=null||(r.serum!=null||r.latex!=null)).map(r=>({...r,flow:r.flow??((r.serum||0)+(r.latex||0))}));
       if(!d.length) return [];
       const effVal    = s.kwhTotal ? s.totalFlow/s.kwhTotal : 0;
       const costVal   = s.totalFlow ? s.kwhTotal*this.costRate/s.totalFlow : 0;
@@ -457,7 +467,7 @@ export default {
     },
     annualOrpBarStats() {
       const s=this.annualStats, t=this.t;
-      const d=this.annualData.filter(r=>r.flow!==null);
+      const d=this.annualData.filter(r=>r.orp_serum!=null||r.orp_latex!=null);
       const orpOk=d.filter(r=>r.orp_serum>this.threshORP&&r.orp_latex>this.threshORP).length;
       const ach=d.length?Math.round(orpOk/d.length*100):0;
       const achColor=ach>=70?t.hOk:ach>=40?t.hWarn:t.hCrit;
@@ -473,7 +483,7 @@ export default {
       return { serum, latex, total, kwh, eff, serumPct:Math.round(serum/total*100), latexPct:Math.round(latex/total*100) };
     },
   },
-  async created() {
+  async mounted() {
     this._chartMain=null; this._chartORP=null; this._chartPerf=null; this._chartBlower=null;
     const now = new Date();
     const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -485,8 +495,8 @@ export default {
       const res = await axios.get(`${API}/api/kd/history/monthly?year=${now.getFullYear()}`);
       this.annualData = res.data && res.data.length ? res.data : genAnnualData();
     } catch { this.annualData = genAnnualData(); }
+    this.buildCharts();
   },
-  mounted()      { this.buildCharts(); },
   beforeUnmount(){ this.destroyCharts(); },
   methods: {
     fmt0(v)     { const n=parseInt(v); return isNaN(n)?'—':n.toLocaleString(); },
@@ -549,8 +559,9 @@ export default {
     },
     getAnnualChartData() {
       const d=this.annualData, rate=parseFloat(this.costRate)||4.5;
+      const ML=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       return {
-        labels:    d.map(r=>r.label),
+        labels:    d.map(r=>r.label||(r.month?ML[r.month-1]:null)||String(r.month||'')),
         serum:     d.map(r=>r.serum),
         latex:     d.map(r=>r.latex),
         kwh:       d.map(r=>r.kwh),

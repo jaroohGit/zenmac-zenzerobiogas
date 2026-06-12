@@ -148,7 +148,6 @@ export default {
       threshPH: 7.0,
       chartData: { labels:[], serumORP:[], latexORP:[], serumPH:[], latexPH:[], serumFlow:[], latexFlow:[], kwh1:[], kwh2:[] },
       rows: [],
-      _cORP: null, _cPH: null, _cFlow: null, _cEnergy: null,
     };
   },
   computed: {
@@ -194,6 +193,7 @@ export default {
     },
   },
   async mounted() {
+    this._cORP=null; this._cPH=null; this._cFlow=null; this._cEnergy=null;
     await this.loadData();
     this.buildCharts();
   },
