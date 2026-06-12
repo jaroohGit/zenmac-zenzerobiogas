@@ -3,16 +3,105 @@
 
     <!-- ── NAVBAR ── -->
     <nav class="l-nav">
-      <ul class="l-nav-links">
-        <li><a href="#mission">Philosophy</a></li>
-        <li><a href="#clients">Clients</a></li>
-        <li><a href="#clients" class="l-rnd-btn"><i class="bx bx-flask"></i> R&amp;D</a></li>
-        <li><router-link to="/login" class="l-login-btn">Login</router-link></li>
+
+      <!-- Logo mark -->
+      <router-link to="/" class="l-nav-logo">
+        <div class="nl-bars">
+          <span class="nl-b b1"></span><span class="nl-b b2"></span>
+          <span class="nl-b b3"></span><span class="nl-b b4"></span>
+        </div>
+        <span class="nl-name">ZenMAC</span>
+      </router-link>
+
+      <div class="l-nav-divider"></div>
+
+      <!-- Company menu -->
+      <ul class="l-nav-companies">
+
+        <!-- STA — ACTIVE -->
+        <li class="nc-item" @mouseenter="openMenu('sta')" @mouseleave="closeMenu">
+          <button class="nc-btn nc-active">
+            <span class="nc-dot"></span>
+            STA
+            <i class="bx bx-chevron-down nc-arrow"></i>
+          </button>
+          <div class="nc-dropdown" v-show="activeMenu==='sta'">
+            <div class="ncd-label">SRI TRANG AGRO-INDUSTRY</div>
+            <router-link to="/kd/app/overview" class="ncd-plant ncd-live">
+              <div class="ncdp-left">
+                <span class="ncdp-dot live"></span>
+                <div>
+                  <div class="ncdp-name">STA-KD</div>
+                  <div class="ncdp-desc">Wastewater Treatment · Krabi</div>
+                </div>
+              </div>
+              <span class="ncdp-arrow">→</span>
+            </router-link>
+            <div class="ncd-plant ncd-soon">
+              <div class="ncdp-left">
+                <span class="ncdp-dot soon"></span>
+                <div>
+                  <div class="ncdp-name">STA-XX</div>
+                  <div class="ncdp-desc">Coming soon</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- Betagro -->
+        <li class="nc-item" @mouseenter="openMenu('betagro')" @mouseleave="closeMenu">
+          <button class="nc-btn nc-dev">
+            Betagro
+            <i class="bx bx-chevron-down nc-arrow"></i>
+          </button>
+          <div class="nc-dropdown" v-show="activeMenu==='betagro'">
+            <div class="ncd-label">BETAGRO PCL.</div>
+            <div class="ncd-empty">No plants configured yet</div>
+          </div>
+        </li>
+
+        <!-- TiiZ -->
+        <li class="nc-item" @mouseenter="openMenu('tiiz')" @mouseleave="closeMenu">
+          <button class="nc-btn nc-dev">
+            TiiZ KM30
+            <i class="bx bx-chevron-down nc-arrow"></i>
+          </button>
+          <div class="nc-dropdown" v-show="activeMenu==='tiiz'">
+            <div class="ncd-label">TIIZ CO., LTD.</div>
+            <div class="ncd-empty">No plants configured yet</div>
+          </div>
+        </li>
+
+        <!-- Pala -->
+        <li class="nc-item" @mouseenter="openMenu('pala')" @mouseleave="closeMenu">
+          <button class="nc-btn nc-dev">
+            Pala Asset
+            <i class="bx bx-chevron-down nc-arrow"></i>
+          </button>
+          <div class="nc-dropdown" v-show="activeMenu==='pala'">
+            <div class="ncd-label">PALA ASSET CO., LTD.</div>
+            <div class="ncd-empty">No plants configured yet</div>
+          </div>
+        </li>
+
+        <!-- R&D -->
+        <li class="nc-item nc-rnd-item">
+          <button class="nc-btn nc-rnd">
+            <i class="bx bx-flask"></i> R&amp;D
+          </button>
+        </li>
+
       </ul>
-      <div class="l-mqtt-pill" :class="mqttConnected ? 'mqtt-on' : 'mqtt-off'">
-        <span class="mqtt-dot"></span>
-        {{ mqttConnected ? 'SYSTEM ONLINE' : 'CONNECTING...' }}
+
+      <div class="l-nav-right">
+        <div class="l-mqtt-pill" :class="mqttConnected ? 'mqtt-on' : 'mqtt-off'">
+          <span class="mqtt-dot"></span>
+          {{ mqttConnected ? 'ONLINE' : 'CONNECTING' }}
+        </div>
+        <router-link to="/login" class="l-login-btn">Login</router-link>
       </div>
+
     </nav>
 
     <!-- ── BODY ── -->
@@ -110,8 +199,15 @@ import { mapState } from 'vuex';
 
 export default {
   name: 'KDLanding',
+  data() {
+    return { activeMenu: null };
+  },
   computed: {
     ...mapState('staKd', ['mqttConnected']),
+  },
+  methods: {
+    openMenu(key) { this.activeMenu = key; },
+    closeMenu()   { this.activeMenu = null; },
   },
   created() {
     this.$store.dispatch('staKd/initSocket');
@@ -137,41 +233,133 @@ export default {
 
 /* ── NAVBAR ── */
 .l-nav {
-  height: 52px;
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 40px;
-  background: rgba(8,11,15,.95);
+  height: 52px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 0;
+  padding: 0 28px;
+  background: rgba(8,11,15,.97);
   border-bottom: 1px solid rgba(255,255,255,.06);
-  z-index: 10;
+  z-index: 100;
 }
-.l-nav-links { display: flex; gap: 2px; list-style: none; }
-.l-nav-links a {
-  font-size: 14px; font-weight: 500; color: rgba(255,255,255,.4);
-  text-decoration: none; padding: 5px 14px; border-radius: 6px; transition: all .15s;
+
+/* Logo */
+.l-nav-logo {
+  display: flex; align-items: center; gap: 9px;
+  text-decoration: none; flex-shrink: 0; padding-right: 20px;
 }
-.l-nav-links a:hover { color: #fff; background: rgba(255,255,255,.05); }
-.l-rnd-btn {
-  color: #7ab4d4 !important;
-  display: flex; align-items: center; gap: 5px;
+.nl-bars { display: flex; align-items: flex-end; gap: 3px; height: 18px; }
+.nl-b { display: block; width: 4px; border-radius: 2px 2px 0 0; background: #d4a040; }
+.b1 { height: 40%; } .b2 { height: 70%; } .b3 { height: 100%; } .b4 { height: 60%; }
+.nl-name {
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 800;
+  letter-spacing: .06em;
+  background: linear-gradient(135deg, #e8a020, #f0c060);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
-.l-rnd-btn:hover { background: rgba(122,180,212,.08) !important; color: #a8d4f0 !important; }
-.l-login-btn {
-  color: #111 !important;
-  background: linear-gradient(135deg, #d4a040, #f0c060) !important;
-  font-weight: 700 !important;
+
+.l-nav-divider { width: 1px; height: 26px; background: rgba(255,255,255,.08); flex-shrink: 0; }
+
+/* Company nav */
+.l-nav-companies { display: flex; align-items: stretch; list-style: none; height: 100%; }
+.nc-item { position: relative; display: flex; align-items: center; }
+
+.nc-btn {
+  height: 100%; padding: 0 16px;
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,.35); transition: all .15s;
+  white-space: nowrap; position: relative;
 }
-.l-login-btn:hover { background: linear-gradient(135deg, #e0b55a, #f5cb75) !important; }
+.nc-btn:hover { color: rgba(255,255,255,.8); background: rgba(255,255,255,.04); }
+.nc-btn::after {
+  content: ''; position: absolute; bottom: 0; left: 16px; right: 16px; height: 2px;
+  border-radius: 2px 2px 0 0; background: transparent; transition: background .15s;
+}
+.nc-btn:hover::after { background: rgba(255,255,255,.12); }
+
+/* Active company (STA) */
+.nc-active { color: #b8e834 !important; }
+.nc-active:hover { background: rgba(184,232,52,.05) !important; }
+.nc-active::after { background: #b8e834 !important; }
+.nc-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #b8e834; flex-shrink: 0;
+  box-shadow: 0 0 6px #b8e83480; animation: blink 2s infinite;
+}
+
+/* DEV companies */
+.nc-dev { opacity: .7; }
+
+/* R&D */
+.nc-rnd-item { margin-left: 4px; }
+.nc-rnd { color: #7ab4d4 !important; gap: 5px; }
+.nc-rnd:hover { background: rgba(122,180,212,.07) !important; }
+.nc-rnd::after { background: #7ab4d430 !important; }
+
+.nc-arrow { font-size: 14px; opacity: .5; transition: transform .2s; }
+.nc-item:hover .nc-arrow { transform: rotate(180deg); }
+
+/* Dropdown */
+.nc-dropdown {
+  position: absolute; top: calc(100% + 1px); left: 0;
+  min-width: 240px;
+  background: #0d1117;
+  border: 1px solid rgba(255,255,255,.1);
+  border-top: 2px solid #b8e834;
+  border-radius: 0 0 10px 10px;
+  padding: 10px 0;
+  box-shadow: 0 16px 40px rgba(0,0,0,.6);
+  z-index: 200;
+}
+.nc-item.nc-rnd-item .nc-dropdown,
+.nc-item:not(:first-child) .nc-dropdown { border-top-color: rgba(255,255,255,.18); }
+
+.ncd-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700;
+  letter-spacing: .14em; color: rgba(255,255,255,.22);
+  padding: 4px 16px 8px; text-transform: uppercase;
+}
+
+/* Plant row */
+.ncd-plant {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 16px; text-decoration: none; color: rgba(255,255,255,.55);
+  transition: all .15s; gap: 12px;
+}
+.ncd-plant:hover { background: rgba(255,255,255,.05); color: #fff; }
+.ncd-live:hover  { background: rgba(184,232,52,.07); }
+.ncdp-left { display: flex; align-items: center; gap: 10px; }
+.ncdp-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.ncdp-dot.live { background: #b8e834; box-shadow: 0 0 6px #b8e83480; animation: blink 2s infinite; }
+.ncdp-dot.soon { background: rgba(255,255,255,.18); }
+.ncdp-name { font-size: 13px; font-weight: 700; color: #fff; }
+.ncdp-desc { font-size: 10px; color: rgba(255,255,255,.3); margin-top: 1px; }
+.ncdp-arrow { font-size: 14px; color: #b8e834; opacity: 0; transition: all .15s; }
+.ncd-plant:hover .ncdp-arrow { opacity: 1; transform: translateX(3px); }
+
+.ncd-empty {
+  padding: 10px 16px;
+  font-size: 11px; color: rgba(255,255,255,.2); font-style: italic;
+}
+
+/* Right side */
+.l-nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .l-mqtt-pill {
-  font-family: 'JetBrains Mono', monospace; font-size: 11px;
-  letter-spacing: .08em; padding: 4px 12px; border-radius: 20px;
-  display: flex; align-items: center; gap: 6px; border: 1px solid transparent;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: .07em; padding: 3px 10px; border-radius: 20px;
+  display: flex; align-items: center; gap: 5px; border: 1px solid transparent;
 }
 .mqtt-on  { color: #b8e834; border-color: #b8e83430; background: #b8e83412; }
 .mqtt-off { color: #ffb800; border-color: #ffb80030; background: #ffb80012; }
-.mqtt-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.mqtt-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .mqtt-on .mqtt-dot { animation: blink 2s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+.l-login-btn {
+  font-size: 13px; font-weight: 700; color: #111;
+  background: linear-gradient(135deg, #d4a040, #f0c060);
+  padding: 5px 16px; border-radius: 6px; text-decoration: none; transition: all .15s;
+  white-space: nowrap;
+}
+.l-login-btn:hover { background: linear-gradient(135deg, #e0b55a, #f5cb75); }
 
 /* ── BODY ── */
 .l-body {
