@@ -32,7 +32,7 @@
                 <span class="ncdp-dot live"></span>
                 <div>
                   <div class="ncdp-name">STA-KD</div>
-                  <div class="ncdp-desc">Wastewater Treatment · Krabi</div>
+                  <div class="ncdp-desc">Wastewater Treatment</div>
                 </div>
               </div>
               <span class="ncdp-arrow">→</span>
@@ -64,11 +64,11 @@
         <!-- TiiZ -->
         <li class="nc-item" @mouseenter="openMenu('tiiz')" @mouseleave="closeMenu">
           <button class="nc-btn nc-dev">
-            TiiZ KM30
+            TIZ KM30
             <i class="bx bx-chevron-down nc-arrow"></i>
           </button>
           <div class="nc-dropdown" v-show="activeMenu==='tiiz'">
-            <div class="ncd-label">TIIZ CO., LTD.</div>
+            <div class="ncd-label">TIZ CO., LTD.</div>
             <div class="ncd-empty">No plants configured yet</div>
           </div>
         </li>
