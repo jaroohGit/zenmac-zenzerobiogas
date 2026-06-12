@@ -87,9 +87,9 @@
 
         <!-- R&D -->
         <li class="nc-item nc-rnd-item">
-          <button class="nc-btn nc-rnd">
+          <a href="/rnd/" class="nc-btn nc-rnd" target="_blank">
             <i class="bx bx-flask"></i> R&amp;D
-          </button>
+          </a>
         </li>
 
       </ul>
