@@ -107,27 +107,36 @@
       <!-- Description -->
       <div class="arp-desc">
         <i class="bx bx-info-circle"></i>
-        Airflow-ORP Mode: ระบบตรวจค่า ORP แบบ real-time แล้วเปรียบเทียบกับ 5 Band ที่ตั้งไว้ (HH / H / ZERO / L / LL) → Blower จะปรับ Air Flow อัตโนมัติตาม Band ที่ ORP ตกอยู่ในขณะนั้น → HH (เกิน +150) = หรี่ Blower สุด (Aeration ลด) | LL (ต่ำกว่า -150) = เปิด Blower เต็มที่
+        <span>Airflow-ORP Mode: ระบบตรวจค่า ORP แบบ real-time แล้วเปรียบเทียบกับ 5 Band ที่ตั้งไว้ (HH / H / ZERO / L / LL) → Blower จะปรับ Air Flow อัตโนมัติตาม Band ที่ ORP ตกอยู่ในขณะนั้น → HH (เกิน +150) = หรี่ Blower สุด | LL (ต่ำกว่า -150) = เปิด Blower เต็มที่</span>
       </div>
 
       <!-- Two panels -->
       <div class="arp-grid">
 
         <!-- ─ BL-1 SERUM panel ─ -->
-        <div class="arp-panel">
+        <div class="arp-panel" style="--pcolor:#ff7820">
           <div class="arp-panel-hdr">
-            <div class="arp-panel-accent" style="background:#ff7820"></div>
+            <div class="arp-panel-accent" style="background:linear-gradient(180deg,#ff7820 0%,#ff782055 100%)"></div>
             <div class="arp-panel-titles">
-              <div class="arp-panel-name">AIRFLOW-ORP MODE — SERUM (AT-1)</div>
-              <div class="arp-panel-sub">5-Band ORP → Air Flow</div>
+              <div class="arp-panel-name">
+                AIRFLOW-ORP MODE
+                <span class="arp-bl-badge" style="background:#ff782015;color:#ff9848;border-color:#ff782042">BL-1</span>
+              </div>
+              <div class="arp-panel-sub">SERUM (AT-1) · 5-Band ORP → Air Flow Control</div>
+            </div>
+            <div class="arp-panel-status-chip" :class="arpActive1 ? 'arp-psc-on' : 'arp-psc-off'">
+              {{ arpActive1 ? '◉ ENABLED' : '○ OFF' }}
             </div>
           </div>
 
           <!-- Current ORP indicator -->
-          <div class="arp-cur-row">
-            <span class="arp-cur-lbl">Current Serum ORP:</span>
-            <span class="arp-cur-val" :style="`color:${activeBandColor(activeSerumBand, 'serum')}`">{{ serumORP }} mV</span>
-            <span class="arp-cur-zone" :style="`color:${activeBandColor(activeSerumBand,'serum')};border-color:${activeBandColor(activeSerumBand,'serum')}55;background:${activeBandColor(activeSerumBand,'serum')}18`">
+          <div class="arp-cur-row"
+               :style="`border-left-color:${activeBandColor(activeSerumBand,'serum')};background:${activeBandColor(activeSerumBand,'serum')}12`">
+            <i class="bx bx-pulse arp-cur-icon"></i>
+            <span class="arp-cur-lbl">SERUM ORP</span>
+            <span class="arp-cur-val" :style="`color:${activeBandColor(activeSerumBand,'serum')};text-shadow:0 0 14px ${activeBandColor(activeSerumBand,'serum')}66`">{{ serumORP }} mV</span>
+            <div class="arp-cur-spacer"></div>
+            <span class="arp-cur-zone" :style="`color:${activeBandColor(activeSerumBand,'serum')};border-color:${activeBandColor(activeSerumBand,'serum')}55;background:${activeBandColor(activeSerumBand,'serum')}18;box-shadow:0 0 10px ${activeBandColor(activeSerumBand,'serum')}30`">
               {{ arpBandsSerum[activeSerumBand]?.zone || '—' }}
             </span>
           </div>
@@ -144,9 +153,11 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(b, i) in arpBandsSerum" :key="i" :class="i===activeSerumBand ? 'arp-row-active' : ''">
+              <tr v-for="(b, i) in arpBandsSerum" :key="i"
+                  :class="i===activeSerumBand ? 'arp-row-active' : ''"
+                  :style="i===activeSerumBand ? `border-left:2px solid ${b.color};background:${b.color}10` : ''">
                 <td>
-                  <span class="zone-bdg" :style="`background:${b.color}22;color:${b.color};border:1px solid ${b.color}55`">{{ b.zone }}</span>
+                  <span class="zone-bdg" :style="`background:${b.color}20;color:${b.color};border:1px solid ${b.color}50;box-shadow:0 0 8px ${b.color}28`">{{ b.zone }}</span>
                 </td>
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_lo" :style="`color:${b.color}`" /></td>
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_hi" :style="`color:${b.color}`" /></td>
@@ -169,9 +180,11 @@
           <!-- Band bar -->
           <div class="arp-band-bar">
             <div v-for="(b, i) in arpBandsSerum.slice().reverse()" :key="i"
-                 class="arp-band-seg" :style="`background:${b.color}33;border-color:${b.color}66`"
+                 class="arp-band-seg"
+                 :style="`background:linear-gradient(180deg,${b.color}44 0%,${b.color}1e 100%);border-color:${b.color}50;${arpBandsSerum.length-1-i===activeSerumBand?'box-shadow:inset 0 0 20px '+b.color+'40,0 0 8px '+b.color+'30;':''}`"
                  :class="arpBandsSerum.length-1-i === activeSerumBand ? 'arp-seg-active' : ''">
-              <span class="arp-band-zone" :style="`color:${b.color}`">{{ b.zone }}</span>
+              <span class="arp-band-zone"
+                    :style="`color:${b.color};${arpBandsSerum.length-1-i===activeSerumBand?'text-shadow:0 0 8px '+b.color+'99;':''}`">{{ b.zone }}</span>
               <span class="arp-band-range">{{ bandRangeLabel(b, i, arpBandsSerum.length) }}</span>
             </div>
           </div>
@@ -186,25 +199,34 @@
               </span>
             </label>
             <button class="arp-save-btn" @click="saveArp(1)">
-              <i class="bx bx-save"></i> SAVE BL-1 (Serum)
+              <i class="bx bx-save"></i> SAVE BL-1
             </button>
           </div>
         </div>
 
         <!-- ─ BL-2 LATEX panel ─ -->
-        <div class="arp-panel">
+        <div class="arp-panel" style="--pcolor:#00e87a">
           <div class="arp-panel-hdr">
-            <div class="arp-panel-accent" style="background:#00e87a"></div>
+            <div class="arp-panel-accent" style="background:linear-gradient(180deg,#00e87a 0%,#00e87a55 100%)"></div>
             <div class="arp-panel-titles">
-              <div class="arp-panel-name">AIRFLOW-ORP MODE — LATEX (AT-2)</div>
-              <div class="arp-panel-sub">5-Band ORP → Air Flow</div>
+              <div class="arp-panel-name">
+                AIRFLOW-ORP MODE
+                <span class="arp-bl-badge" style="background:#00e87a15;color:#00e87a;border-color:#00e87a42">BL-2</span>
+              </div>
+              <div class="arp-panel-sub">LATEX (AT-2) · 5-Band ORP → Air Flow Control</div>
+            </div>
+            <div class="arp-panel-status-chip" :class="arpActive2 ? 'arp-psc-on' : 'arp-psc-off'">
+              {{ arpActive2 ? '◉ ENABLED' : '○ OFF' }}
             </div>
           </div>
 
-          <div class="arp-cur-row">
-            <span class="arp-cur-lbl">Current Latex ORP:</span>
-            <span class="arp-cur-val" :style="`color:${activeBandColor(activeLatexBand,'latex')}`">{{ processORP }} mV</span>
-            <span class="arp-cur-zone" :style="`color:${activeBandColor(activeLatexBand,'latex')};border-color:${activeBandColor(activeLatexBand,'latex')}55;background:${activeBandColor(activeLatexBand,'latex')}18`">
+          <div class="arp-cur-row"
+               :style="`border-left-color:${activeBandColor(activeLatexBand,'latex')};background:${activeBandColor(activeLatexBand,'latex')}12`">
+            <i class="bx bx-pulse arp-cur-icon"></i>
+            <span class="arp-cur-lbl">LATEX ORP</span>
+            <span class="arp-cur-val" :style="`color:${activeBandColor(activeLatexBand,'latex')};text-shadow:0 0 14px ${activeBandColor(activeLatexBand,'latex')}66`">{{ processORP }} mV</span>
+            <div class="arp-cur-spacer"></div>
+            <span class="arp-cur-zone" :style="`color:${activeBandColor(activeLatexBand,'latex')};border-color:${activeBandColor(activeLatexBand,'latex')}55;background:${activeBandColor(activeLatexBand,'latex')}18;box-shadow:0 0 10px ${activeBandColor(activeLatexBand,'latex')}30`">
               {{ arpBandsLatex[activeLatexBand]?.zone || '—' }}
             </span>
           </div>
@@ -221,9 +243,11 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(b, i) in arpBandsLatex" :key="i" :class="i===activeLatexBand ? 'arp-row-active' : ''">
+              <tr v-for="(b, i) in arpBandsLatex" :key="i"
+                  :class="i===activeLatexBand ? 'arp-row-active' : ''"
+                  :style="i===activeLatexBand ? `border-left:2px solid ${b.color};background:${b.color}10` : ''">
                 <td>
-                  <span class="zone-bdg" :style="`background:${b.color}22;color:${b.color};border:1px solid ${b.color}55`">{{ b.zone }}</span>
+                  <span class="zone-bdg" :style="`background:${b.color}20;color:${b.color};border:1px solid ${b.color}50;box-shadow:0 0 8px ${b.color}28`">{{ b.zone }}</span>
                 </td>
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_lo" :style="`color:${b.color}`" /></td>
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_hi" :style="`color:${b.color}`" /></td>
@@ -245,9 +269,11 @@
 
           <div class="arp-band-bar">
             <div v-for="(b, i) in arpBandsLatex.slice().reverse()" :key="i"
-                 class="arp-band-seg" :style="`background:${b.color}33;border-color:${b.color}66`"
+                 class="arp-band-seg"
+                 :style="`background:linear-gradient(180deg,${b.color}44 0%,${b.color}1e 100%);border-color:${b.color}50;${arpBandsLatex.length-1-i===activeLatexBand?'box-shadow:inset 0 0 20px '+b.color+'40,0 0 8px '+b.color+'30;':''}`"
                  :class="arpBandsLatex.length-1-i === activeLatexBand ? 'arp-seg-active' : ''">
-              <span class="arp-band-zone" :style="`color:${b.color}`">{{ b.zone }}</span>
+              <span class="arp-band-zone"
+                    :style="`color:${b.color};${arpBandsLatex.length-1-i===activeLatexBand?'text-shadow:0 0 8px '+b.color+'99;':''}`">{{ b.zone }}</span>
               <span class="arp-band-range">{{ bandRangeLabel(b, i, arpBandsLatex.length) }}</span>
             </div>
           </div>
@@ -262,7 +288,7 @@
               </span>
             </label>
             <button class="arp-save-btn" @click="saveArp(2)">
-              <i class="bx bx-save"></i> SAVE BL-2 (Latex)
+              <i class="bx bx-save"></i> SAVE BL-2
             </button>
           </div>
         </div>
@@ -414,60 +440,90 @@ export default {
 .kd-tp-marker { flex: 1; height: 1px; background: rgba(168,85,247,.2); }
 
 /* ══ AIRFLOW-ORP MODE ══ */
-.arp-wrap { display: flex; flex-direction: column; gap: 10px; }
+.arp-wrap { display: flex; flex-direction: column; gap: 12px; }
 
 .arp-desc {
-  font-family: var(--font-mono); font-size: 10px; line-height: 1.6;
-  background: rgba(0,212,255,.05); border: 1px solid rgba(0,212,255,.15);
-  border-left: 3px solid rgba(0,212,255,.4);
-  border-radius: 7px; padding: 10px 14px; color: rgba(200,220,240,.55);
+  font-family: var(--font-mono); font-size: 10px; line-height: 1.65;
+  background: linear-gradient(90deg, rgba(0,212,255,.07) 0%, rgba(0,212,255,.02) 100%);
+  border: 1px solid rgba(0,212,255,.16); border-left: 3px solid rgba(0,212,255,.45);
+  border-radius: 8px; padding: 10px 14px; color: rgba(200,220,240,.48);
   display: flex; gap: 8px; align-items: flex-start;
+  box-shadow: 0 2px 14px rgba(0,0,0,.22);
 }
 .arp-desc i { font-size: 14px; color: rgba(0,212,255,.6); flex-shrink: 0; margin-top: 1px; }
 
-.arp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.arp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .arp-panel {
-  background: rgba(8,12,20,.95); border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px; padding: 14px 16px;
-  display: flex; flex-direction: column; gap: 10px;
+  background: linear-gradient(155deg, rgba(16,22,36,.97) 0%, rgba(9,13,22,.99) 100%);
+  border: 1px solid rgba(255,255,255,.1); border-top: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 8px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+  border-radius: 12px; padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 12px;
+  position: relative; overflow: hidden;
+}
+.arp-panel::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(90deg, transparent 0%, var(--pcolor, rgba(0,212,255,.6)) 35%, transparent 100%);
 }
 
-.arp-panel-hdr { display: flex; align-items: center; gap: 10px; }
-.arp-panel-accent { width: 4px; height: 32px; border-radius: 2px; flex-shrink: 0; }
-.arp-panel-name {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
-  letter-spacing: .08em; color: rgba(220,230,245,.85);
+.arp-panel-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,.06);
 }
-.arp-panel-sub { font-family: var(--font-mono); font-size: 9px; color: rgba(200,215,230,.3); margin-top: 2px; }
+.arp-panel-accent { width: 3px; height: 34px; border-radius: 2px; flex-shrink: 0; }
+.arp-panel-titles { flex: 1; min-width: 0; }
+.arp-panel-name {
+  font-family: var(--font-mono); font-size: 11.5px; font-weight: 700;
+  letter-spacing: .07em; color: rgba(222,232,248,.9);
+  display: flex; align-items: center; gap: 8px;
+}
+.arp-panel-sub { font-family: var(--font-mono); font-size: 8.5px; color: rgba(200,215,230,.28); margin-top: 3px; letter-spacing: .04em; }
+.arp-bl-badge {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 800;
+  padding: 2px 8px; border-radius: 4px; border: 1px solid; letter-spacing: .12em;
+}
+.arp-panel-status-chip {
+  font-family: var(--font-mono); font-size: 8.5px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px; border: 1px solid; letter-spacing: .07em;
+  flex-shrink: 0; transition: all .2s;
+}
+.arp-psc-on  { color: #00e87a; border-color: rgba(0,232,122,.32); background: rgba(0,232,122,.1); box-shadow: 0 0 10px rgba(0,232,122,.18); }
+.arp-psc-off { color: rgba(200,215,230,.22); border-color: rgba(255,255,255,.09); background: rgba(255,255,255,.03); }
 
 /* Current ORP indicator */
 .arp-cur-row {
   display: flex; align-items: center; gap: 8px;
-  font-family: var(--font-mono); font-size: 10px;
-  background: rgba(255,255,255,.03); border-radius: 6px; padding: 6px 10px;
+  font-family: var(--font-mono);
+  border: 1px solid rgba(255,255,255,.07); border-left: 3px solid;
+  border-radius: 8px; padding: 9px 13px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.2);
+  transition: border-left-color .3s;
 }
-.arp-cur-lbl { color: rgba(200,215,230,.35); }
-.arp-cur-val { font-size: 13px; font-weight: 700; }
+.arp-cur-icon { font-size: 15px; color: rgba(200,215,230,.28); flex-shrink: 0; }
+.arp-cur-lbl {
+  font-size: 8.5px; font-weight: 700; color: rgba(200,215,230,.32);
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.arp-cur-val { font-size: 17px; font-weight: 800; letter-spacing: .02em; margin-left: 2px; }
+.arp-cur-spacer { flex: 1; }
 .arp-cur-zone {
-  font-size: 10px; font-weight: 800; padding: 2px 8px;
-  border-radius: 4px; border: 1px solid; letter-spacing: .08em; margin-left: 4px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 800;
+  padding: 3px 11px; border-radius: 5px; border: 1px solid; letter-spacing: .1em;
 }
 
 /* Table */
-.arp-table {
-  width: 100%; border-collapse: collapse;
-  font-family: var(--font-mono); font-size: 10px;
-}
+.arp-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 10px; }
 .arp-table th {
-  font-size: 8.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-  color: rgba(200,215,230,.28); padding: 6px 8px; text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  font-size: 8px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: rgba(200,215,230,.24); padding: 5px 8px; text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.012);
 }
 .arp-table td { padding: 5px 8px; vertical-align: middle; }
-.arp-table tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
-.arp-table tr:hover { background: rgba(255,255,255,.03); }
-.arp-row-active { background: rgba(255,255,255,.05) !important; }
+.arp-table tr { border-bottom: 1px solid rgba(255,255,255,.034); transition: background .12s; }
+.arp-table tbody tr:hover { background: rgba(255,255,255,.024); }
+.arp-row-active { /* left border + bg injected inline per zone color */ }
 
 .zone-bdg {
   font-family: var(--font-mono); font-size: 10px; font-weight: 800;
@@ -477,95 +533,114 @@ export default {
 
 .arp-inp {
   width: 70px; font-family: var(--font-mono); font-size: 12px; font-weight: 700;
-  background: rgba(18,28,44,.8); border: 1px solid rgba(255,255,255,.1);
-  color: rgba(200,220,240,.8); padding: 4px 6px; border-radius: 5px;
-  outline: none; text-align: center; transition: border-color .15s;
+  background: rgba(14,20,34,.88); border: 1px solid rgba(255,255,255,.09);
+  color: rgba(200,220,240,.75); padding: 4px 6px; border-radius: 5px;
+  outline: none; text-align: center; transition: all .15s;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.28);
 }
-.arp-inp:focus { border-color: rgba(0,212,255,.4); background: rgba(22,35,55,.9); }
+.arp-inp:focus {
+  border-color: rgba(0,212,255,.42); background: rgba(20,30,50,.92);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.28), 0 0 0 2px rgba(0,212,255,.08);
+}
 .th-cmm { color: var(--cyan) !important; letter-spacing: .08em; }
 .th-rt  { color: #00e87a !important; letter-spacing: .08em; }
 .arp-inp-cmm {
-  color: var(--cyan) !important;
-  border-color: rgba(0,212,255,.25) !important;
-  background: rgba(0,212,255,.06) !important;
-  width: 76px;
+  color: var(--cyan) !important; border-color: rgba(0,212,255,.2) !important;
+  background: rgba(0,212,255,.05) !important; width: 76px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.2), 0 0 0 1px rgba(0,212,255,.05) !important;
 }
-.arp-inp-cmm:focus { border-color: rgba(0,212,255,.6) !important; background: rgba(0,212,255,.12) !important; }
+.arp-inp-cmm:focus {
+  border-color: rgba(0,212,255,.52) !important; background: rgba(0,212,255,.1) !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.2), 0 0 0 2px rgba(0,212,255,.1) !important;
+}
 .arp-rt-val {
   display: inline-flex; align-items: center; gap: 5px;
-  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
-  color: #00e87a;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 800;
+  color: #00e87a; letter-spacing: .02em;
 }
 .arp-rt-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: #00e87a;
-  box-shadow: 0 0 6px #00e87a;
+  width: 7px; height: 7px; border-radius: 50%; background: #00e87a; flex-shrink: 0;
   animation: rtpulse 1.4s ease-in-out infinite;
-  flex-shrink: 0;
 }
-@keyframes rtpulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
-.arp-rt-idle { color: rgba(200,215,230,.18); font-family: var(--font-mono); font-size: 12px; }
+@keyframes rtpulse {
+  0%,100% { box-shadow: 0 0 8px #00e87a, 0 0 16px rgba(0,232,122,.4); opacity: 1; }
+  50%      { box-shadow: 0 0 3px #00e87a, 0 0 6px rgba(0,232,122,.2);  opacity: .5; }
+}
+.arp-rt-idle { color: rgba(200,215,230,.15); font-family: var(--font-mono); font-size: 12px; }
 
 .arp-status {
-  font-size: 9px; font-weight: 700; padding: 3px 9px;
-  border-radius: 4px; letter-spacing: .06em; display: inline-block;
+  font-family: var(--font-mono); font-size: 8.5px; font-weight: 700;
+  padding: 2px 9px; border-radius: 20px; letter-spacing: .06em; display: inline-block;
 }
 .arp-active {
   color: #00e87a; background: rgba(0,232,122,.1);
-  border: 1px solid rgba(0,232,122,.3);
+  border: 1px solid rgba(0,232,122,.28); box-shadow: 0 0 8px rgba(0,232,122,.18);
 }
 .arp-idle {
-  color: rgba(200,215,230,.25); background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
+  color: rgba(200,215,230,.2); background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.07);
 }
 
 /* Band visualization bar */
 .arp-band-bar {
-  display: flex; border-radius: 6px; overflow: hidden;
-  height: 40px; border: 1px solid rgba(255,255,255,.08);
+  display: flex; border-radius: 8px; overflow: hidden; height: 52px;
+  border: 1px solid rgba(255,255,255,.07);
+  box-shadow: 0 3px 14px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.04);
 }
 .arp-band-seg {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 2px;
-  border-right: 1px solid rgba(0,0,0,.3); cursor: default;
-  transition: filter .15s;
+  border-right: 1px solid rgba(0,0,0,.35); cursor: default;
+  transition: filter .15s, transform .12s;
+  position: relative;
 }
 .arp-band-seg:last-child { border-right: none; }
-.arp-band-seg:hover { filter: brightness(1.3); }
-.arp-seg-active { filter: brightness(1.4) !important; outline: 1px solid rgba(255,255,255,.25); }
+.arp-band-seg:hover { filter: brightness(1.22); }
+.arp-seg-active { filter: brightness(1.55) !important; transform: scaleY(1.05); z-index: 1; outline: 1px solid rgba(255,255,255,.28); }
 .arp-band-zone { font-family: var(--font-mono); font-size: 10px; font-weight: 800; letter-spacing: .06em; }
-.arp-band-range { font-family: var(--font-mono); font-size: 7.5px; color: rgba(255,255,255,.45); }
+.arp-band-range { font-family: var(--font-mono); font-size: 7px; color: rgba(255,255,255,.38); }
 
 /* Footer: toggle + save */
 .arp-footer {
   display: flex; align-items: center; justify-content: space-between;
-  padding-top: 4px;
+  padding-top: 10px; border-top: 1px solid rgba(255,255,255,.06);
 }
-.arp-toggle-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.arp-toggle-wrap { display: flex; align-items: center; gap: 9px; cursor: pointer; user-select: none; }
 .arp-toggle {
-  width: 38px; height: 20px; border-radius: 10px;
-  background: rgba(255,255,255,.12); position: relative;
-  transition: background .2s; cursor: pointer; flex-shrink: 0;
-  border: 1px solid rgba(255,255,255,.15);
+  width: 40px; height: 22px; border-radius: 11px;
+  background: rgba(255,255,255,.1); position: relative;
+  transition: background .25s, box-shadow .25s; cursor: pointer; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,.12);
 }
-.arp-toggle-on { background: rgba(0,232,122,.35); border-color: rgba(0,232,122,.5); }
+.arp-toggle-on {
+  background: rgba(0,232,122,.28); border-color: rgba(0,232,122,.42);
+  box-shadow: 0 0 14px rgba(0,232,122,.22), inset 0 0 8px rgba(0,232,122,.12);
+}
 .arp-toggle-knob {
-  position: absolute; top: 2px; left: 2px;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: rgba(200,215,230,.6); transition: transform .2s, background .2s;
+  position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(188,205,225,.6); box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), background .22s;
 }
 .arp-toggle-on .arp-toggle-knob {
   transform: translateX(18px); background: #00e87a;
+  box-shadow: 0 0 8px rgba(0,232,122,.55), 0 1px 3px rgba(0,0,0,.3);
 }
-.arp-toggle-lbl { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: rgba(200,215,230,.4); letter-spacing: .06em; transition: color .2s; }
+.arp-toggle-lbl {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  color: rgba(200,215,230,.32); letter-spacing: .07em; transition: color .2s;
+}
 
 .arp-save-btn {
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
-  padding: 7px 16px; border-radius: 6px; cursor: pointer;
-  background: rgba(0,212,255,.1); color: var(--cyan);
-  border: 1px solid rgba(0,212,255,.35);
+  padding: 7px 16px; border-radius: 7px; cursor: pointer;
+  background: rgba(0,212,255,.08); color: var(--cyan);
+  border: 1px solid rgba(0,212,255,.28);
   display: flex; align-items: center; gap: 6px;
-  transition: background .15s;
+  transition: all .15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,.22);
 }
-.arp-save-btn:hover { background: rgba(0,212,255,.2); }
+.arp-save-btn:hover {
+  background: rgba(0,212,255,.16); border-color: rgba(0,212,255,.48);
+  box-shadow: 0 0 14px rgba(0,212,255,.18), 0 2px 8px rgba(0,0,0,.22);
+}
 </style>
