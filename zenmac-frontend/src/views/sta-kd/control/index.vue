@@ -138,9 +138,8 @@
                 <th>ZONE</th>
                 <th>ORP LOW (mV)</th>
                 <th>ORP HIGH (mV)</th>
-                <th>BLOWER FLOW (%)</th>
-                <th>BLOWER FLOW (m³/hr)</th>
                 <th class="th-cmm">TURBO FLOW SET (CMM)</th>
+                <th class="th-rt">REAL-TIME (CMM)</th>
                 <th>STATUS</th>
               </tr>
             </thead>
@@ -151,9 +150,13 @@
                 </td>
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_lo" :style="`color:${b.color}`" /></td>
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_hi" :style="`color:${b.color}`" /></td>
-                <td><input type="number" class="arp-inp" v-model.number="b.flow_pct" min="0" max="100" /></td>
-                <td><input type="number" class="arp-inp" v-model.number="b.flow_m3" min="0" max="9999" /></td>
                 <td><input type="number" class="arp-inp arp-inp-cmm" v-model.number="b.flow_cmm" min="0" max="200" step="0.1" /></td>
+                <td>
+                  <span v-if="i===activeSerumBand" class="arp-rt-val">
+                    <span class="arp-rt-dot"></span>{{ rtCmm1 !== null ? rtCmm1 : '—' }}
+                  </span>
+                  <span v-else class="arp-rt-idle">—</span>
+                </td>
                 <td>
                   <span class="arp-status" :class="i===activeSerumBand ? 'arp-active' : 'arp-idle'">
                     {{ i===activeSerumBand ? '● ACTIVE' : 'IDLE' }}
@@ -212,9 +215,8 @@
                 <th>ZONE</th>
                 <th>ORP LOW (mV)</th>
                 <th>ORP HIGH (mV)</th>
-                <th>BLOWER FLOW (%)</th>
-                <th>BLOWER FLOW (m³/hr)</th>
                 <th class="th-cmm">TURBO FLOW SET (CMM)</th>
+                <th class="th-rt">REAL-TIME (CMM)</th>
                 <th>STATUS</th>
               </tr>
             </thead>
@@ -225,9 +227,13 @@
                 </td>
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_lo" :style="`color:${b.color}`" /></td>
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_hi" :style="`color:${b.color}`" /></td>
-                <td><input type="number" class="arp-inp" v-model.number="b.flow_pct" min="0" max="100" /></td>
-                <td><input type="number" class="arp-inp" v-model.number="b.flow_m3" min="0" max="9999" /></td>
                 <td><input type="number" class="arp-inp arp-inp-cmm" v-model.number="b.flow_cmm" min="0" max="200" step="0.1" /></td>
+                <td>
+                  <span v-if="i===activeLatexBand" class="arp-rt-val">
+                    <span class="arp-rt-dot"></span>{{ rtCmm2 !== null ? rtCmm2 : '—' }}
+                  </span>
+                  <span v-else class="arp-rt-idle">—</span>
+                </td>
                 <td>
                   <span class="arp-status" :class="i===activeLatexBand ? 'arp-active' : 'arp-idle'">
                     {{ i===activeLatexBand ? '● ACTIVE' : 'IDLE' }}
@@ -271,11 +277,11 @@
 import { mapGetters } from 'vuex';
 
 const DEFAULT_BANDS = () => [
-  { zone:'HH', color:'#dd4444', orp_lo:150,  orp_hi:999,  flow_pct:20,  flow_m3:1200, flow_cmm:20.0 },
-  { zone:'H',  color:'#cc8833', orp_lo:75,   orp_hi:150,  flow_pct:45,  flow_m3:2700, flow_cmm:45.0 },
-  { zone:'ZERO',color:'#2a8a7a',orp_lo:-75,  orp_hi:75,   flow_pct:65,  flow_m3:3800, flow_cmm:63.3 },
-  { zone:'L',  color:'#44aa55', orp_lo:-150, orp_hi:-75,  flow_pct:85,  flow_m3:5000, flow_cmm:83.3 },
-  { zone:'LL', color:'#8844cc', orp_lo:-999, orp_hi:-150, flow_pct:100, flow_m3:6000, flow_cmm:100.0 },
+  { zone:'HH', color:'#dd4444', orp_lo:150,  orp_hi:999,  flow_cmm:20.0 },
+  { zone:'H',  color:'#cc8833', orp_lo:75,   orp_hi:150,  flow_cmm:45.0 },
+  { zone:'ZERO',color:'#2a8a7a',orp_lo:-75,  orp_hi:75,   flow_cmm:63.3 },
+  { zone:'L',  color:'#44aa55', orp_lo:-150, orp_hi:-75,  flow_cmm:83.3 },
+  { zone:'LL', color:'#8844cc', orp_lo:-999, orp_hi:-150, flow_cmm:100.0 },
 ];
 
 export default {
@@ -307,7 +313,9 @@ export default {
     };
   },
   computed: {
-    ...mapGetters('staKd', ['processORP', 'serumORP']),
+    ...mapGetters('staKd', ['processORP', 'serumORP', 'tb1Flow', 'tb2Flow']),
+    rtCmm1() { const n=parseFloat(this.tb1Flow); return isNaN(n)?null:+n.toFixed(1); },
+    rtCmm2() { const n=parseFloat(this.tb2Flow); return isNaN(n)?null:+n.toFixed(1); },
     activeSerumBand() {
       const v = parseFloat(this.serumORP);
       if (isNaN(v)) return 2;
@@ -475,6 +483,7 @@ export default {
 }
 .arp-inp:focus { border-color: rgba(0,212,255,.4); background: rgba(22,35,55,.9); }
 .th-cmm { color: var(--cyan) !important; letter-spacing: .08em; }
+.th-rt  { color: #00e87a !important; letter-spacing: .08em; }
 .arp-inp-cmm {
   color: var(--cyan) !important;
   border-color: rgba(0,212,255,.25) !important;
@@ -482,6 +491,20 @@ export default {
   width: 76px;
 }
 .arp-inp-cmm:focus { border-color: rgba(0,212,255,.6) !important; background: rgba(0,212,255,.12) !important; }
+.arp-rt-val {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+  color: #00e87a;
+}
+.arp-rt-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #00e87a;
+  box-shadow: 0 0 6px #00e87a;
+  animation: rtpulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes rtpulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
+.arp-rt-idle { color: rgba(200,215,230,.18); font-family: var(--font-mono); font-size: 12px; }
 
 .arp-status {
   font-size: 9px; font-weight: 700; padding: 3px 9px;
