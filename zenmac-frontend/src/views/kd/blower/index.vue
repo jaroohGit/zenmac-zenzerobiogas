@@ -273,6 +273,26 @@
       </div>
     </div>
 
+    <!-- ── kW Monitoring (1D / 7D / 1M) ── -->
+    <div class="bw-kw-mon-card">
+      <div class="bw-ch-hdr">
+        <span class="bw-ch-dot" :style="`background:${t.kwh}`"></span>
+        POWER MONITORING
+        <span class="bw-kw-unit-hint" :style="`color:${t.tick}`">{{ kwPeriod==='1d' ? '— instantaneous kW' : '— daily total kWh' }}</span>
+        <span class="bw-legend" style="margin-left:auto">
+          <span class="bw-ls" :style="`background:${t.accent}`"></span>TB-01
+          <span class="bw-ls" :style="`background:${t.kwh}`"></span>TB-02
+          <span class="bw-ls" style="background:#888;margin-left:4px"></span>Total
+        </span>
+        <div class="view-sw" style="margin-left:8px">
+          <button class="view-btn" :class="{active:kwPeriod==='1d'}" @click="setKwPeriod('1d')">1D</button>
+          <button class="view-btn" :class="{active:kwPeriod==='7d'}" @click="setKwPeriod('7d')">7D</button>
+          <button class="view-btn" :class="{active:kwPeriod==='1m'}" @click="setKwPeriod('1m')">1M</button>
+        </div>
+      </div>
+      <div class="bw-kw-wrap"><canvas ref="chartKwMon"></canvas></div>
+    </div>
+
     <!-- Summary charts -->
     <div class="bw-sum-charts">
       <div class="bw-chart-card">
@@ -593,7 +613,8 @@ export default {
     return {
       currentThemeKey:'slate', THEMES,
       summaryMode:'daily', summaryOffset:0,
-      dailyData:[], monthlyData:[],
+      kwPeriod:'1d',
+      dailyData:[], monthlyData:[], kwDailyData:[], kwMonthlyData:[],
       op1:{ pct:72, flow:3800 },
       op2:{ pct:0,  flow:0    },
     };
@@ -605,8 +626,11 @@ export default {
     this._cTrend1=null; this._cTrend2=null;
     this._cSumPow=null; this._cSumFlow=null; this._cSumEnergy=null;
     this._cSumTemp=null; this._cSumPress=null; this._cSumRatio=null;
+    this._cKwMon=null;
     this.dailyData=genDailyData(0);
     this.monthlyData=genMonthlyData(0);
+    this.kwDailyData=genDailyData(0);
+    this.kwMonthlyData=genMonthlyData(0);
   },
   mounted()      { this.buildCharts(); },
   beforeUnmount(){ this.destroyCharts(); },
@@ -630,10 +654,11 @@ export default {
     },
     destroyCharts() {
       [this._cTrend1,this._cTrend2,this._cSumPow,this._cSumFlow,this._cSumEnergy,
-       this._cSumTemp,this._cSumPress,this._cSumRatio].forEach(c=>c?.destroy());
+       this._cSumTemp,this._cSumPress,this._cSumRatio,this._cKwMon].forEach(c=>c?.destroy());
       this._cTrend1=this._cTrend2=null;
       this._cSumPow=this._cSumFlow=this._cSumEnergy=null;
       this._cSumTemp=this._cSumPress=this._cSumRatio=null;
+      this._cKwMon=null;
     },
     _baseOpts() {
       const t=this.t;
@@ -648,6 +673,7 @@ export default {
     },
     buildCharts() {
       this.buildTrendCharts();
+      this.buildKwChart();
       this.buildSummaryCharts();
     },
     buildTrendCharts() {
@@ -761,6 +787,88 @@ export default {
           x:{...opts.scales.x},
           y:{...opts.scales.y, title:{display:true,text:'Disch/|Suct|',color:t.hOk,font:{size:8}}},
         }},
+      });
+    },
+    setKwPeriod(p) {
+      if(this.kwPeriod===p) return;
+      this.kwPeriod=p;
+      if(this._cKwMon){ this._cKwMon.destroy(); this._cKwMon=null; }
+      this.$nextTick(()=>this.buildKwChart());
+    },
+    buildKwChart() {
+      const t=this.t;
+      let labels, d1, d2, dtotal, isLine;
+      if(this.kwPeriod==='1d') {
+        const d=this.kwDailyData;
+        labels=d.map(r=>r.label);
+        d1=d.map(r=>r.tb1pow??null);
+        d2=d.map(r=>r.tb2pow??null);
+        dtotal=d.map(r=>(r.tb1pow!=null&&r.tb2pow!=null)?+(r.tb1pow+r.tb2pow).toFixed(1):null);
+        isLine=true;
+      } else if(this.kwPeriod==='7d') {
+        const d=this.kwMonthlyData.filter(r=>r.tb1kwh!=null).slice(-7);
+        labels=d.map(r=>r.label);
+        d1=d.map(r=>r.tb1kwh); d2=d.map(r=>r.tb2kwh);
+        dtotal=d.map(r=>(r.tb1kwh||0)+(r.tb2kwh||0));
+        isLine=false;
+      } else {
+        const d=this.kwMonthlyData;
+        labels=d.map(r=>r.label);
+        d1=d.map(r=>r.tb1kwh??null); d2=d.map(r=>r.tb2kwh??null);
+        dtotal=d.map(r=>(r.tb1kwh!=null&&r.tb2kwh!=null)?(r.tb1kwh+r.tb2kwh):null);
+        isLine=false;
+      }
+      const yLabel=isLine?'kW':'kWh';
+      this._cKwMon=new Chart(this.$refs.chartKwMon, {
+        type: isLine?'line':'bar',
+        data:{ labels, datasets:[
+          {
+            label:'TB-01',
+            data:d1,
+            borderColor:t.accent,
+            backgroundColor:h2r(t.accent, isLine?.12:.78),
+            borderWidth:isLine?2:0,
+            pointRadius:0, tension:0.3,
+            fill:isLine, stack:isLine?undefined:'kw',
+            borderRadius:isLine?0:3, order:2,
+          },
+          {
+            label:'TB-02',
+            data:d2,
+            borderColor:t.kwh,
+            backgroundColor:h2r(t.kwh, isLine?.12:.72),
+            borderWidth:isLine?2:0,
+            pointRadius:0, tension:0.3,
+            fill:isLine, stack:isLine?undefined:'kw',
+            borderRadius:isLine?0:3, order:3,
+          },
+          {
+            type:'line',
+            label:'Total',
+            data:dtotal,
+            borderColor:'rgba(200,200,200,.5)',
+            backgroundColor:'transparent',
+            borderWidth:1.5,
+            borderDash: isLine?[]:undefined,
+            pointRadius:0, tension:0.3, fill:false,
+            yAxisID:'yTotal', order:1,
+          },
+        ]},
+        options:{
+          responsive:true, maintainAspectRatio:false, animation:false,
+          plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false,bodyFont:{family:'JetBrains Mono',size:11}} },
+          scales:{
+            x:{ ticks:{color:t.tick,font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:isLine?12:31}, grid:{color:h2r(t.tick,.12)}, border:{display:false}, stacked:!isLine },
+            y:{ ticks:{color:t.kwh,font:{size:9},callback:v=>v+' '+yLabel}, grid:{color:h2r(t.tick,.12)}, border:{display:false}, stacked:!isLine,
+                title:{display:true,text:yLabel,color:t.kwh,font:{size:8}} },
+            yTotal:{
+              type:'linear', position:'right',
+              ticks:{color:'rgba(200,200,200,.35)',font:{size:9},callback:v=>v+' '+(isLine?'kW':'kWh')},
+              grid:{display:false}, border:{display:false},
+              title:{display:true,text:'Total',color:'rgba(200,200,200,.35)',font:{size:8}},
+            },
+          },
+        },
       });
     },
     setSummaryMode(mode) {
@@ -925,6 +1033,15 @@ export default {
 .bw-kpi-chips { display:flex; flex-wrap:wrap; gap:4px; }
 .bw-kpi-chip  { font-size:9px; padding:2px 7px; border-radius:3px; background:var(--ex-tag-bg); border:1px solid var(--ex-tag-bdr); white-space:nowrap; }
 .bw-kpi-foot  { font-size:9px; color:var(--ex-text-sub); }
+
+/* ── kW Monitoring card ── */
+.bw-kw-mon-card {
+  background:var(--ex-card-bg); border:1px solid var(--ex-card-bdr);
+  border-radius:8px; padding:10px 14px;
+  display:flex; flex-direction:column; gap:6px;
+}
+.bw-kw-wrap { height:130px; position:relative; }
+.bw-kw-unit-hint { font-size:9px; font-weight:500; letter-spacing:.04em; }
 
 /* ── Summary charts ── */
 .bw-sum-charts { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
