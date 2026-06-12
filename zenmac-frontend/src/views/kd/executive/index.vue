@@ -72,36 +72,38 @@
       <!-- Right: charts -->
       <div class="monthly-charts">
 
-        <!-- TOP ROW: 2 main charts -->
+        <!-- ROW 1 -->
         <div class="chart-card">
           <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.perf}`"></span>{{ viewMode==='annual'?'EFFICIENCY BY MONTH':'TREATMENT EFFICIENCY' }} — m³/kWh
+            <span class="ch-dot" :style="`background:${t.perf}`"></span>
+            <span class="ch-title">{{ viewMode==='annual'?'EFFICIENCY BY MONTH':'TREATMENT EFFICIENCY' }}</span>
             <span class="legend">
-              <span class="ls" :style="`background:${t.perf}`"></span>m³/kWh
-              <span class="ll" :style="`background:${t.hWarn};margin-left:4px`"></span>฿/m³
+              <span class="ls" :style="`background:${t.perf}`"></span><span class="u">m³/kWh</span>
               <span class="ll-dash" :style="`border-color:${t.thresh}`"></span><span :style="`color:${t.thresh}`">{{ threshEff }}</span>
             </span>
-            <span class="ctrl-group">Thresh <input type="number" v-model.number="threshEff" step="0.1" min="0.1" max="10" class="ctrl-input" :style="`color:${t.thresh};border-color:${t.thresh}40;background:${t.thresh}14`"/> m³/kWh</span>
+            <span class="ctrl-group">THRESH <input type="number" v-model.number="threshEff" step="0.1" min="0.1" max="10" class="ctrl-input" :style="`color:${t.thresh};border-color:${t.thresh}40;background:${t.thresh}14`"/> <span class="u">m³/kWh</span></span>
           </div>
           <div class="chart-wrap"><canvas ref="chartPerf"></canvas></div>
         </div>
+
         <div class="chart-card">
           <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.kwh}`"></span>BLOWER ENERGY — TB-01 vs TB-02 {{ viewMode==='annual'?'(kWh/month)':'(kWh/day)' }}
+            <span class="ch-dot" :style="`background:${t.kwh}`"></span>
+            <span class="ch-title">BLOWER ENERGY + COST <span class="u">{{ viewMode==='annual'?'(kWh/mo)':'(kWh/day)' }}</span></span>
             <span class="legend">
               <span class="ls" :style="`background:${t.kwh}`"></span>TB-01
               <span class="ls" :style="`background:${t.cost}`"></span>TB-02
-              <span class="ll" :style="`background:${t.hWarn};margin-left:4px`"></span>Cost ฿
+              <span class="ll" :style="`background:${t.hWarn};margin-left:4px`"></span><span class="u">฿</span>
             </span>
-            <span class="ctrl-group">Rate <input type="number" v-model.number="costRate" step="0.10" min="1" max="20" class="ctrl-input" :style="`color:${t.hWarn};border-color:${t.hWarn}40;background:${t.hWarn}14`"/> ฿/kWh</span>
+            <span class="ctrl-group">RATE <input type="number" v-model.number="costRate" step="0.10" min="1" max="20" class="ctrl-input" :style="`color:${t.hWarn};border-color:${t.hWarn}40;background:${t.hWarn}14`"/> <span class="u">฿/kWh</span></span>
           </div>
           <div class="chart-wrap"><canvas ref="chartBlower"></canvas></div>
         </div>
 
-        <!-- BOTTOM-LEFT: Flow chart -->
         <div class="chart-card">
           <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.serum}`"></span>DAILY FLOW — SERUM &amp; LATEX {{ viewMode==='annual'?'(m³/month)':'(m³/day)' }}
+            <span class="ch-dot" :style="`background:${t.serum}`"></span>
+            <span class="ch-title">DAILY FLOW <span class="u">{{ viewMode==='annual'?'(m³/mo)':'(m³/day)' }}</span></span>
             <span class="legend">
               <span class="ls" :style="`background:${t.serum}`"></span>Serum
               <span class="ls" :style="`background:${t.latex}`"></span>Latex
@@ -110,18 +112,35 @@
           <div class="chart-wrap"><canvas ref="chartMain"></canvas></div>
         </div>
 
-        <!-- BOTTOM-RIGHT: ORP chart -->
+        <!-- ROW 2 -->
         <div class="chart-card">
           <div class="chart-hdr">
-            <span class="ch-dot" :style="`background:${t.orpS}`"></span>ORP — SERUM &amp; LATEX {{ viewMode==='annual'?'(mV/month)':'(mV/day)' }}
+            <span class="ch-dot" :style="`background:${t.orpS}`"></span>
+            <span class="ch-title">ORP <span class="u">{{ viewMode==='annual'?'(mV/mo)':'(mV/day)' }}</span></span>
             <span class="legend">
               <span class="ls" :style="`background:${t.orpS}`"></span>Serum
               <span class="ls" :style="`background:${t.orpL}`"></span>Latex
               <span class="ll-dash" :style="`border-color:${t.thresh}`"></span><span :style="`color:${t.thresh};font-size:9px`">{{ threshORP }}</span>
             </span>
-            <span class="ctrl-group">Thresh <input type="number" v-model.number="threshORP" step="10" min="10" max="500" class="ctrl-input" :style="`color:${t.thresh};border-color:${t.thresh}40;background:${t.thresh}14`"/> mV</span>
+            <span class="ctrl-group">THRESH <input type="number" v-model.number="threshORP" step="10" min="10" max="500" class="ctrl-input" :style="`color:${t.thresh};border-color:${t.thresh}40;background:${t.thresh}14`"/> <span class="u">mV</span></span>
           </div>
           <div class="chart-wrap"><canvas ref="chartORP"></canvas></div>
+        </div>
+
+        <!-- TBD slots -->
+        <div class="chart-card chart-tbd">
+          <div class="tbd-inner">
+            <i class="bx bx-bar-chart-alt-2 tbd-icon"></i>
+            <div class="tbd-label">กำลังออกแบบ</div>
+            <div class="tbd-sub">Coming soon</div>
+          </div>
+        </div>
+        <div class="chart-card chart-tbd">
+          <div class="tbd-inner">
+            <i class="bx bx-line-chart tbd-icon"></i>
+            <div class="tbd-label">กำลังออกแบบ</div>
+            <div class="tbd-sub">Coming soon</div>
+          </div>
         </div>
 
       </div>
@@ -253,7 +272,9 @@ const SCALE_X = {
   ticks:{color:'',font:{size:8},maxTicksLimit:31,autoSkip:false,maxRotation:0},
   grid:{display:false},
 };
-const fitY = s => { s.width=52; };
+const fitY  = s => { s.width=56; };
+const fitYR = s => { s.width=50; }; // fixed right-axis width (same as layout.padding.right below)
+const RPAD  = 50; // right padding for charts without a right axis — keeps X-axis dates aligned
 
 export default {
   name: 'KDExecutive',
@@ -264,11 +285,10 @@ export default {
     costRate() {
       const cd = this.viewMode==='annual' ? this.getAnnualChartData() : this.getChartData();
       if(this._chartBlower) { this._chartBlower.data.datasets[2].data=cd.cost; this._chartBlower.update('none'); }
-      if(this._chartPerf)   { this._chartPerf.data.datasets[1].data=cd.costPerM3; this._chartPerf.update('none'); }
     },
     threshEff() {
       if(this._chartPerf) {
-        this._chartPerf.data.datasets[2].data=this._chartPerf.data.labels.map(()=>this.threshEff);
+        this._chartPerf.data.datasets[1].data=this._chartPerf.data.labels.map(()=>this.threshEff);
         this._chartPerf.update('none');
       }
     },
@@ -397,8 +417,6 @@ export default {
       const kwoSColor = kwoSMeter>=70?t.hOk:kwoSMeter>=40?t.hWarn:t.hCrit;
       return [
         { tag:'TREAT. EFFICIENCY', big:effVal.toFixed(2),  unit:'m³/kWh', color:effColor,  foot:'Flow ÷ Energy — Higher is Better', meter:effMeter,  meterColor:effColor,  status:effMeter>=100?'OPTIMAL':effMeter>=60?'MODERATE':'NEEDS WORK' },
-        { tag:'AERATION COST',     big:costVal.toFixed(1), unit:'฿/m³',   color:costColor, foot:`Rate ${this.costRate} ฿/kWh`,      meter:costMeter, meterColor:costColor, status:costMeter>=60?'EFFICIENT':costMeter>=30?'MODERATE':'HIGH COST' },
-        { tag:'kWh/ORP-SERUM',     big:kwoS, unit:'kWh/mV', color:kwoSColor, foot:`Avg ORP Serum: ${s.avgORPSerum} mV`, meter:kwoSMeter, meterColor:kwoSColor, status:kwoSMeter>=70?'EFFICIENT':kwoSMeter>=40?'MODERATE':'REVIEW' },
         { tag:'ORP ACHIEVEMENT',   big:orpAch,    unit:'%',      color:orpColor,  foot:`${orpOk}/${d.length} days ORP > 150 mV` },
       ];
     },
@@ -448,8 +466,6 @@ export default {
       const kwoSColor = kwoSMeter>=70?t.hOk:kwoSMeter>=40?t.hWarn:t.hCrit;
       return [
         { tag:'ANNUAL EFFICIENCY', big:effVal.toFixed(2),  unit:'m³/kWh', color:effColor,  foot:'Annual Flow ÷ Energy', meter:effMeter,  meterColor:effColor,  status:effMeter>=100?'OPTIMAL':effMeter>=60?'MODERATE':'NEEDS WORK' },
-        { tag:'AVG AERATION COST', big:costVal.toFixed(1), unit:'฿/m³',   color:costColor, foot:`Rate ${this.costRate} ฿/kWh`,  meter:costMeter, meterColor:costColor, status:costMeter>=60?'EFFICIENT':costMeter>=30?'MODERATE':'HIGH COST' },
-        { tag:'kWh/ORP-SERUM',     big:kwoS, unit:'kWh/mV', color:kwoSColor, foot:`Avg ORP Serum: ${s.avgOrpS} mV`, meter:kwoSMeter, meterColor:kwoSColor, status:kwoSMeter>=70?'EFFICIENT':kwoSMeter>=40?'MODERATE':'REVIEW' },
         { tag:'ORP ACHIEVEMENT',   big:orpAch, unit:'%',  color:orpColor, foot:`${orpOk}/${d.length} months ORP > 150 mV` },
       ];
     },
@@ -546,7 +562,7 @@ export default {
       const li=tk.bg[1]>'8';
       const axisBdr=li?'rgba(0,0,0,.05)':'rgba(255,255,255,.05)';
       const BASE={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}}};
-      const scY=(cb,color=tk.tick)=>({afterFit:fitY,ticks:{color,font:{size:9},callback:cb},grid:{display:false},border:{color:axisBdr}});
+      const scY=(cb,color=tk.tick)=>({afterFit:fitY,ticks:{color,font:{size:8},callback:cb},grid:{display:false},border:{color:axisBdr}});
       const sX={...SCALE_X,ticks:{...SCALE_X.ticks,color:tk.tick}};
       return {tk,axisBdr,BASE,scY,sX};
     },
@@ -582,13 +598,11 @@ export default {
       const sXA={ ticks:{color:tk.tick,font:{size:9},maxRotation:0}, grid:{display:false}, border:{display:false} };
       this._chartPerf=new Chart(this.$refs.chartPerf,{
         type:'bar',data:{labels:cd.labels,datasets:[
-          {type:'bar',  label:'m³/kWh', data:cd.treatEff,  backgroundColor:h2r(tk.perf,.75), borderRadius:4, yAxisID:'y',  order:2},
-          {type:'line', label:'฿/m³',   data:cd.costPerM3, borderColor:tk.hWarn, backgroundColor:h2r(tk.hWarn,.06), borderWidth:2, pointRadius:4, pointBackgroundColor:tk.hWarn, tension:.4, fill:false, yAxisID:'y1', order:1},
-          {type:'line', label:'Threshold 1.5', data:cd.labels.map(()=>this.threshEff), borderColor:tk.thresh, backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], pointRadius:0, tension:0, fill:false, yAxisID:'y', order:3},
-        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
+          {type:'bar',  label:'m³/kWh', data:cd.treatEff,  backgroundColor:h2r(tk.perf,.75), borderRadius:4, yAxisID:'y', order:2},
+          {type:'line', label:'Threshold', data:cd.labels.map(()=>this.threshEff), borderColor:tk.thresh, backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], pointRadius:0, tension:0, fill:false, yAxisID:'y', order:3},
+        ]},options:{...BASE,layout:{padding:{right:RPAD}},interaction:{mode:'index',intersect:false},scales:{
           x:sXA,
-          y: scY(v=>v.toFixed(2),tk.perf),
-          y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+v},grid:{display:false},border:{color:axisBdr}},
+          y:{...scY(v=>v.toFixed(2),tk.perf),min:0},
         }},
       });
       this._chartBlower=new Chart(this.$refs.chartBlower,{
@@ -598,17 +612,17 @@ export default {
           {type:'line',label:'Cost ฿',data:cd.cost,borderColor:tk.hWarn,backgroundColor:h2r(tk.hWarn,.08),borderWidth:2,pointRadius:4,pointBackgroundColor:tk.hWarn,tension:.4,fill:false,yAxisID:'y1'},
         ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
           x:sXA,
-          y:{...scY(v=>(v/1000).toFixed(0)+'k kWh'),stacked:true},
-          y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+(v/1000).toFixed(0)+'k'},grid:{display:false},border:{color:axisBdr}},
+          y:{...scY(v=>(v/1000).toFixed(1)+'k'),stacked:true,min:0},
+          y1:{position:'right',afterFit:fitYR,ticks:{color:tk.hWarn,font:{size:8},callback:v=>'฿'+(v/1000).toFixed(0)+'k'},grid:{display:false},border:{color:axisBdr}},
         }},
       });
       this._chartMain=new Chart(this.$refs.chartMain,{
         type:'bar',data:{labels:cd.labels,datasets:[
           {label:'Serum',data:cd.serum,backgroundColor:h2r(tk.serum,.78),stack:'flow',borderRadius:4},
           {label:'Latex',data:cd.latex,backgroundColor:h2r(tk.latex,.78),stack:'flow',borderRadius:4},
-        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
+        ]},options:{...BASE,layout:{padding:{right:RPAD}},interaction:{mode:'index',intersect:false},scales:{
           x:{...sXA,stacked:true},
-          y:{...scY(v=>(v/1000).toFixed(0)+'k'),stacked:true},
+          y:{...scY(v=>(v/1000).toFixed(0)+'k'),stacked:true,min:0},
         }},
       });
       this._chartORP=new Chart(this.$refs.chartORP,{
@@ -616,7 +630,7 @@ export default {
           {label:'Serum ORP',data:cd.orp_serum,borderColor:tk.orpS,backgroundColor:h2r(tk.orpS,.07),borderWidth:2,pointRadius:4,pointBackgroundColor:tk.orpS,tension:.4,fill:true},
           {label:'Latex ORP',data:cd.orp_latex,borderColor:tk.orpL,backgroundColor:h2r(tk.orpL,.07),borderWidth:2,pointRadius:4,pointBackgroundColor:tk.orpL,tension:.4,fill:true},
           {label:'Threshold',data:cd.labels.map(()=>this.threshORP),borderColor:tk.thresh,backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0,fill:false},
-        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{x:sXA,y:scY(v=>v+' mV')}},
+        ]},options:{...BASE,layout:{padding:{right:RPAD}},interaction:{mode:'index',intersect:false},scales:{x:sXA,y:{afterFit:fitY,ticks:{color:tk.tick,font:{size:8},callback:v=>v+'mV',maxTicksLimit:5},grid:{display:false},border:{color:axisBdr},suggestedMin:50,suggestedMax:450}}},
       });
     },
     buildMonthlyCharts() {
@@ -624,13 +638,11 @@ export default {
       const {tk,axisBdr,BASE,scY,sX}=this._chartBase();
       this._chartPerf=new Chart(this.$refs.chartPerf,{
         type:'bar',data:{labels:cd.labels,datasets:[
-          {type:'bar',  label:'m³/kWh', data:cd.treatEff,  backgroundColor:h2r(tk.perf,.72), borderRadius:2, yAxisID:'y',  order:2},
-          {type:'line', label:'฿/m³',   data:cd.costPerM3, borderColor:tk.hWarn, backgroundColor:h2r(tk.hWarn,.06), borderWidth:1.5, pointRadius:0, tension:.4, fill:false, yAxisID:'y1', order:1},
-          {type:'line', label:'Threshold 1.5', data:cd.labels.map(()=>this.threshEff), borderColor:tk.thresh, backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], pointRadius:0, tension:0, fill:false, yAxisID:'y', order:3},
-        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
+          {type:'bar',  label:'m³/kWh', data:cd.treatEff,  backgroundColor:h2r(tk.perf,.72), borderRadius:2, yAxisID:'y', order:2},
+          {type:'line', label:'Threshold', data:cd.labels.map(()=>this.threshEff), borderColor:tk.thresh, backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], pointRadius:0, tension:0, fill:false, yAxisID:'y', order:3},
+        ]},options:{...BASE,layout:{padding:{right:RPAD}},interaction:{mode:'index',intersect:false},scales:{
           x:sX,
-          y: scY(v=>v.toFixed(2),tk.perf),
-          y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+v},grid:{display:false},border:{color:axisBdr}},
+          y:{...scY(v=>v.toFixed(2),tk.perf),min:0},
         }},
       });
       this._chartBlower=new Chart(this.$refs.chartBlower,{
@@ -640,17 +652,17 @@ export default {
           {type:'line',label:'Cost ฿',data:cd.cost,borderColor:tk.hWarn,backgroundColor:h2r(tk.hWarn,.08),borderWidth:1.5,pointRadius:2,pointBackgroundColor:tk.hWarn,tension:.4,fill:false,yAxisID:'y1'},
         ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
           x:sX,
-          y:{...scY(v=>v+' kWh'),stacked:true},
-          y1:{position:'right',ticks:{color:tk.hWarn,font:{size:9},callback:v=>'฿'+v.toLocaleString()},grid:{display:false},border:{color:axisBdr}},
+          y:{...scY(v=>v+'kWh'),stacked:true,min:0},
+          y1:{position:'right',afterFit:fitYR,ticks:{color:tk.hWarn,font:{size:8},callback:v=>'฿'+v},grid:{display:false},border:{color:axisBdr}},
         },plugins:{...BASE.plugins,legend:{display:false}}},
       });
       this._chartMain=new Chart(this.$refs.chartMain,{
         type:'bar',data:{labels:cd.labels,datasets:[
           {label:'Serum',data:cd.serum,backgroundColor:h2r(tk.serum,.78),stack:'flow',borderRadius:2},
           {label:'Latex',data:cd.latex,backgroundColor:h2r(tk.latex,.78),stack:'flow',borderRadius:2},
-        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{
+        ]},options:{...BASE,layout:{padding:{right:RPAD}},interaction:{mode:'index',intersect:false},scales:{
           x:{...sX,stacked:true},
-          y:{...scY(v=>v+' m³'),stacked:true},
+          y:{...scY(v=>v+'m³'),stacked:true,min:0},
         }},
       });
       this._chartORP=new Chart(this.$refs.chartORP,{
@@ -658,7 +670,7 @@ export default {
           {label:'Serum ORP',data:cd.orp_serum,borderColor:tk.orpS,backgroundColor:h2r(tk.orpS,.07),borderWidth:1.5,pointRadius:2,tension:.4,fill:true},
           {label:'Latex ORP',data:cd.orp_latex,borderColor:tk.orpL,backgroundColor:h2r(tk.orpL,.07),borderWidth:1.5,pointRadius:2,tension:.4,fill:true},
           {label:'Threshold',data:cd.labels.map(()=>this.threshORP),borderColor:tk.thresh,backgroundColor:'transparent',borderWidth:1.5,borderDash:[5,4],pointRadius:0,tension:0,fill:false},
-        ]},options:{...BASE,interaction:{mode:'index',intersect:false},scales:{x:sX,y:scY(v=>v+' mV')}},
+        ]},options:{...BASE,layout:{padding:{right:RPAD}},interaction:{mode:'index',intersect:false},scales:{x:sX,y:{afterFit:fitY,ticks:{color:tk.tick,font:{size:8},callback:v=>v+'mV',maxTicksLimit:5},grid:{display:false},border:{color:axisBdr},suggestedMin:50,suggestedMax:450}}},
       });
     },
   },
@@ -740,7 +752,14 @@ export default {
 
 /* ── Monthly body: charts ── */
 .monthly-body   { flex:1; min-height:0; display:flex; gap:7px; }
-.monthly-charts  { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:5px; }
+.monthly-charts  { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:repeat(3,1fr); gap:5px; }
+
+/* TBD placeholder */
+.chart-tbd { border-style:dashed !important; border-color:rgba(255,255,255,.07) !important; }
+.tbd-inner { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:6px; opacity:.35; }
+.tbd-icon  { font-size:28px; color:var(--ex-text-sub); }
+.tbd-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ex-text-sub); }
+.tbd-sub   { font-size:9px; color:var(--ex-text-sub); }
 
 .chart-card {
   background:var(--ex-card-bg);
@@ -753,14 +772,16 @@ export default {
   display:flex; align-items:center; gap:7px; flex-shrink:0;
   font-size:9px; font-weight:600; color:var(--ex-text); letter-spacing:.07em; text-transform:uppercase;
 }
+.chart-hdr .u { text-transform:none; }
+.ch-title { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ch-dot { width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0; transition:background .3s; }
-.legend { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:9px; color:var(--ex-text-sub); }
+.legend { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:9px; color:var(--ex-text-sub); text-transform:none; }
 .ls { width:8px; height:8px; border-radius:2px; display:inline-block; opacity:.85; transition:background .3s; }
 .ll { width:14px; height:2.5px; border-radius:2px; display:inline-block; opacity:.85; transition:background .3s; }
 .ll-dash { width:14px; display:inline-block; border-top:2px dashed; opacity:.85; vertical-align:middle; }
 
 /* Controls */
-.ctrl-group { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:9px; color:var(--ex-text-sub); }
+.ctrl-group { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:9px; color:var(--ex-text-sub); text-transform:none; }
 .ctrl-input {
   width:46px; padding:1px 5px; border-radius:4px; border-width:1px; border-style:solid;
   font-size:10px; font-weight:600; font-family:'JetBrains Mono',monospace;

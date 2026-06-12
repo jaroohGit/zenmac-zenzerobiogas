@@ -152,7 +152,7 @@
           <div class="sensor-grid">
             <div class="sensor-item">
               <div class="si-tag">ORP SENSOR</div>
-              <div class="si-name si-name-orp">ORP-S-1A</div>
+              <div class="si-name si-name-orp">ORP</div>
               <div class="si-val c-cyan">
                 <span>{{ fmtSigned(serumORP) }}</span><span class="si-unit">mV</span>
               </div>
@@ -160,7 +160,7 @@
             </div>
             <div class="sensor-item">
               <div class="si-tag">pH SENSOR</div>
-              <div class="si-name si-name-ph">pH-S-1A</div>
+              <div class="si-name si-name-ph">pH</div>
               <div class="si-val c-green">
                 <span>{{ fmtNum(serumpH) }}</span>
               </div>
@@ -179,7 +179,7 @@
           <div class="sensor-grid">
             <div class="sensor-item">
               <div class="si-tag">ORP SENSOR</div>
-              <div class="si-name si-name-orp">ORP-L-2A</div>
+              <div class="si-name si-name-orp">ORP</div>
               <div class="si-val c-cyan">
                 <span>{{ fmtSigned(processORP) }}</span><span class="si-unit">mV</span>
               </div>
@@ -187,7 +187,7 @@
             </div>
             <div class="sensor-item">
               <div class="si-tag">pH SENSOR</div>
-              <div class="si-name si-name-ph">pH-L-2A</div>
+              <div class="si-name si-name-ph">pH</div>
               <div class="si-val c-green">
                 <span>{{ fmtNum(processpH) }}</span>
               </div>
@@ -301,6 +301,10 @@ export default {
   },
   mounted() {
     this.buildCharts();
+    this.$nextTick(() => {
+      this._chartORP?.resize();
+      this._chartFlow?.resize();
+    });
     const safeHistory = (topicKey, field, cb) => {
       this.$store.dispatch('staKd/getHistory', { topicKey, field })
         .then(data => { if (data?.length) cb(data); })
@@ -454,13 +458,14 @@ export default {
 </script>
 
 <style scoped>
-/* ── PAGE: fills kd-main, no scroll ──────────────────────────────── */
+/* ── PAGE: scrollable ─────────────────────────────────────────────── */
 .kd-page {
-  height: 100%;
+  min-height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 342px) auto;
+  grid-template-rows: auto auto auto;
   gap: 6px;
-  overflow: hidden;
+  overflow-y: auto;
+  padding-bottom: 16px;
 }
 
 /* ── KPI ROW ──────────────────────────────────────────────────────── */
@@ -486,7 +491,7 @@ export default {
   display: grid;
   grid-template-columns: minmax(0, 837px) 1fr;
   gap: 6px;
-  min-height: 0;
+  align-items: start;
 }
 
 /* ── MAP CARD ─────────────────────────────────────────────────────── */
@@ -499,8 +504,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  min-height: 0;
-  max-height: 342px;
+  height: 342px;
 }
 
 .sec-label {
@@ -589,10 +593,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,.12) transparent;
 }
 .sensor-col::-webkit-scrollbar { width: 4px; }
 .sensor-col::-webkit-scrollbar-track { background: transparent; }
@@ -602,33 +602,33 @@ export default {
 .sensor-panel {
   background: rgba(8,12,18,0.92);
   border: 1px solid var(--border);
-  border-radius: 16px; padding: 18px 20px;
+  border-radius: 16px; padding: 22px 24px;
 }
 .sensor-title {
-  font-family: var(--font-ui); font-weight: 700; font-size: 27px;
-  display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  font-family: var(--font-ui); font-weight: 700; font-size: 30px;
+  display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
 }
-.sensor-acc { width: 5px; height: 27px; border-radius: 2px; flex-shrink: 0; }
-.sensor-sub { font-family: var(--font-mono); font-size: 20px; color: var(--text3); margin-left: auto; }
+.sensor-acc { width: 5px; height: 30px; border-radius: 2px; flex-shrink: 0; }
+.sensor-sub { font-family: var(--font-mono); font-size: 22px; color: var(--text3); margin-left: auto; }
 
-.sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
 .sensor-item {
   background: rgba(14,20,30,.6);
   border: 1px solid var(--border);
-  border-radius: 14px; padding: 14px 16px;
+  border-radius: 14px; padding: 20px 22px;
 }
-.si-tag  { font-family: var(--font-mono); font-size: 17px; color: var(--text3); letter-spacing: .06em; margin-bottom: 2px; }
-.si-name { font-family: var(--font-mono); font-size: 23px; font-weight: 700; margin-bottom: 4px; }
+.si-tag  { font-family: var(--font-mono); font-size: 19px; color: var(--text3); letter-spacing: .06em; margin-bottom: 4px; }
+.si-name { font-family: var(--font-mono); font-size: 28px; font-weight: 700; margin-bottom: 8px; }
 .si-name-orp { color: #ffaa66; }
 .si-name-ph  { color: #66ffaa; }
 .si-val  {
-  font-family: var(--font-mono); font-weight: 700; font-size: 29px;
-  line-height: 1.1; display: flex; align-items: baseline; gap: 3px;
+  font-family: var(--font-mono); font-weight: 700; font-size: 38px;
+  line-height: 1.1; display: flex; align-items: baseline; gap: 4px;
 }
-.si-unit { font-size: 22px; font-weight: 400; color: var(--text2); }
+.si-unit { font-size: 26px; font-weight: 400; color: var(--text2); }
 
-.si-status { font-family: var(--font-mono); font-size: 22px; font-weight: 700; margin-top: 10px; letter-spacing: .04em; }
+.si-status { font-family: var(--font-mono); font-size: 26px; font-weight: 700; margin-top: 14px; letter-spacing: .04em; }
 .ss-ok   { color: var(--green); }
 .ss-low  { color: var(--amber); }
 .ss-warn { color: var(--red); }
@@ -656,7 +656,6 @@ export default {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  height: 230px;
   flex-shrink: 0;
 }
 .chart-card {
@@ -683,7 +682,7 @@ export default {
   white-space: nowrap; flex-shrink: 0;
 }
 .leg-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-.chart-wrap { flex: 1; min-height: 0; position: relative; }
+.chart-wrap { position: relative; height: 630px; }
 
 /* ── RESPONSIVE ───────────────────────────────────────────────────── */
 @media (max-width: 1100px) {

@@ -99,12 +99,12 @@
           <div class="sensor-hdr"><span class="sensor-acc" style="background:#ff7820"></span>AT-SERUM SENSORS<span class="sensor-sub">บ่อ 1</span></div>
           <div class="sensor-grid">
             <div class="sensor-item">
-              <div class="si-name si-orp">ORP-S-1A</div>
+              <div class="si-name si-orp">ORP</div>
               <div class="si-val">{{ fmtSigned(serumORP) }}<span class="si-unit">mV</span></div>
               <div class="si-badge" :class="orpStatusClass(serumORP)">{{ orpLabel(serumORP) }}</div>
             </div>
             <div class="sensor-item">
-              <div class="si-name si-ph">pH-S-1A</div>
+              <div class="si-name si-ph">pH</div>
               <div class="si-val">{{ fmtNum(serumpH) }}</div>
               <div class="si-badge" :class="phStatusClass(serumpH)">{{ phLabel(serumpH) }}</div>
             </div>
@@ -114,12 +114,12 @@
           <div class="sensor-hdr"><span class="sensor-acc" style="background:#00c8b0"></span>AT-LATEX SENSORS<span class="sensor-sub">บ่อ 2</span></div>
           <div class="sensor-grid">
             <div class="sensor-item">
-              <div class="si-name si-orp">ORP-L-2A</div>
+              <div class="si-name si-orp">ORP</div>
               <div class="si-val">{{ fmtSigned(processORP) }}<span class="si-unit">mV</span></div>
               <div class="si-badge" :class="orpStatusClass(processORP)">{{ orpLabel(processORP) }}</div>
             </div>
             <div class="sensor-item">
-              <div class="si-name si-ph">pH-L-2A</div>
+              <div class="si-name si-ph">pH</div>
               <div class="si-val">{{ fmtNum(processpH) }}</div>
               <div class="si-badge" :class="phStatusClass(processpH)">{{ phLabel(processpH) }}</div>
             </div>
@@ -156,22 +156,40 @@ import { mapGetters } from 'vuex';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
-const CHART_OPT = (color1, color2, unit) => ({
+const CHART_OPT = (unit, sugMin, sugMax) => ({
   responsive: true, maintainAspectRatio: false, animation: false,
-  plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      mode: 'index', intersect: false,
+      backgroundColor: 'rgba(8,14,24,.92)',
+      titleColor: 'rgba(255,255,255,.6)',
+      bodyColor: 'rgba(255,255,255,.85)',
+      borderColor: 'rgba(255,255,255,.1)',
+      borderWidth: 1, padding: 10,
+      callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}${unit}` },
+    },
+  },
   scales: {
-    x: { ticks: { color: '#3a5070', font: { size: 8 }, maxTicksLimit: 24, maxRotation: 0, autoSkip: false }, grid: { color: 'rgba(255,255,255,.04)' } },
-    y: { ticks: { color: '#3a5070', font: { size: 9 }, callback: v => `${v}${unit}` }, grid: { color: 'rgba(255,255,255,.06)' } },
+    x: {
+      ticks: { color: '#4a6888', font: { size: 9, weight: '500' }, maxTicksLimit: 12, maxRotation: 0, autoSkip: true },
+      grid: { color: 'rgba(255,255,255,.05)' },
+    },
+    y: {
+      suggestedMin: sugMin, suggestedMax: sugMax,
+      ticks: { color: '#4a6888', font: { size: 10, weight: '600' }, callback: v => `${v}${unit}` },
+      grid: { color: 'rgba(255,255,255,.08)' },
+    },
   },
 });
 
 function makeDataset(label, color) {
   return {
     label, data: [],
-    borderColor: color, backgroundColor: color + '18',
-    borderWidth: 1.5, pointRadius: 3, pointHoverRadius: 5,
-    pointBackgroundColor: color, pointBorderColor: color,
-    tension: 0.3, fill: true,
+    borderColor: color, backgroundColor: color + '22',
+    borderWidth: 2, pointRadius: 2.5, pointHoverRadius: 6,
+    pointBackgroundColor: color, pointBorderColor: 'transparent',
+    tension: 0.4, fill: true, spanGaps: true,
   };
 }
 
@@ -240,12 +258,12 @@ export default {
       this._chartORP = new Chart(this.$refs.chartORP, {
         type: 'line',
         data: { labels, datasets: [makeDataset('Serum ORP','#ff7820'), makeDataset('Latex ORP','#00e87a')] },
-        options: CHART_OPT('#ff7820','#00e87a',' mV'),
+        options: CHART_OPT(' mV', -100, 400),
       });
       this._chartFlow = new Chart(this.$refs.chartFlow, {
         type: 'line',
         data: { labels, datasets: [makeDataset('Serum Flow','#ff7820'), makeDataset('Latex Flow','#00e87a')] },
-        options: CHART_OPT('#ff7820','#00e87a',' m³'),
+        options: CHART_OPT(' m³/hr', 0, 30),
       });
     },
     async loadHistory() {
@@ -267,15 +285,16 @@ export default {
       } catch (e) { /* history unavailable */ }
     },
     pushLivePoint() {
+      const toNum = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
       const push = (chart, v0, v1) => {
         if (!chart) return;
-        chart.data.datasets[0].data.push(parseFloat(v0) || 0);
-        chart.data.datasets[1].data.push(parseFloat(v1) || 0);
+        chart.data.datasets[0].data.push(toNum(v0));
+        chart.data.datasets[1].data.push(toNum(v1));
         if (chart.data.datasets[0].data.length > 24) {
           chart.data.datasets[0].data.shift();
           chart.data.datasets[1].data.shift();
         }
-        chart.update();
+        chart.update('none');
       };
       push(this._chartORP,  this.serumORP,   this.processORP);
       push(this._chartFlow, this.serumFlow,   this.processFlow);
@@ -325,7 +344,7 @@ export default {
 .kpi-sub  { font-size: 11px; color: rgba(255,255,255,.18); margin-top: 2px; }
 
 /* ── MID ROW ── */
-.mid-row { display: grid; grid-template-columns: minmax(0, 837px) 1fr; gap: 8px; height: 420px; flex-shrink: 0; }
+.mid-row { display: grid; grid-template-columns: minmax(0, 837px) 1fr; gap: 8px; height: 360px; flex-shrink: 0; }
 .ov-card {
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.08);
@@ -367,58 +386,69 @@ export default {
 @keyframes pulseA { 0%,100%{opacity:1} 50%{opacity:.35} }
 
 /* ── SENSOR PANEL ── */
-.sensor-col { display: flex; flex-direction: column; gap: 7px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.sensor-col { display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .sensor-col::-webkit-scrollbar { display: none; }
 .sensor-card {
   background: rgba(255,255,255,.04);
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px; padding: 10px 12px;
+  border-radius: 10px; padding: 8px 10px;
 }
 .sensor-hdr {
   display: flex; align-items: center; gap: 6px;
-  font-size: 21px; font-weight: 700; margin-bottom: 8px;
-  color: rgba(255,255,255,.75);
+  font-size: 11px; font-weight: 700; margin-bottom: 6px;
+  color: rgba(255,255,255,.6); letter-spacing: .08em; text-transform: uppercase;
 }
-.sensor-acc { width: 3px; height: 21px; border-radius: 2px; flex-shrink: 0; }
-.sensor-sub { font-size: 16px; color: rgba(255,255,255,.2); margin-left: auto; }
-.sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sensor-acc { width: 3px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+.sensor-sub { font-size: 10px; color: rgba(255,255,255,.2); margin-left: auto; letter-spacing: .04em; }
+.sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .sensor-item {
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.06);
-  border-radius: 7px; padding: 10px 12px;
+  border-radius: 7px; padding: 8px 10px;
 }
-.si-tag { font-size: 15px; font-weight: 600; color: rgba(255,255,255,.2); letter-spacing: .06em; margin-bottom: 2px; }
-.si-name { font-family: 'JetBrains Mono',monospace; font-size: 20px; font-weight: 700; margin-bottom: 3px; }
+.si-tag { font-size: 9px; font-weight: 600; color: rgba(255,255,255,.2); letter-spacing: .06em; margin-bottom: 2px; }
+.si-name { font-family: 'JetBrains Mono',monospace; font-size: 11px; font-weight: 700; margin-bottom: 4px; }
 .si-orp { color: #e0956a; }
 .si-ph  { color: #6aaa88; }
-.si-val { font-family: 'JetBrains Mono',monospace; font-size: 33px; font-weight: 700; color: rgba(255,255,255,.8); line-height: 1.1; }
-.si-unit { font-size: 17px; font-weight: 400; color: rgba(255,255,255,.28); }
-.si-badge { font-family: 'JetBrains Mono',monospace; font-size: 17px; font-weight: 700; margin-top: 6px; letter-spacing: .04em; }
+.si-val { font-family: 'JetBrains Mono',monospace; font-size: 22px; font-weight: 700; color: rgba(255,255,255,.85); line-height: 1.1; }
+.si-unit { font-size: 11px; font-weight: 400; color: rgba(255,255,255,.28); }
+.si-badge { font-size: 10px; font-weight: 700; margin-top: 4px; letter-spacing: .06em; }
 .ss-ok   { color: #b8e834; }
 .ss-low  { color: #ffb800; }
 .ss-warn { color: #ff5050; }
 .ss-off  { color: rgba(255,255,255,.2); }
 
 /* ── CHARTS ── */
-.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; min-height: 0; }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; min-height: 160px; }
 .chart-card {
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px; padding: 8px 12px;
-  display: flex; flex-direction: column; gap: 4px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px; padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 6px;
   min-height: 0;
 }
 .chart-hdr {
-  font-size: 9.5px; font-weight: 600;
-  color: rgba(255,255,255,.35);
-  letter-spacing: .08em; display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700;
+  color: rgba(255,255,255,.55);
+  letter-spacing: .1em; text-transform: uppercase;
+  flex-shrink: 0;
 }
-.chart-acc { width: 5px; height: 5px; background: #d4a040; border-radius: 1px; display: inline-block; }
+.chart-acc {
+  width: 8px; height: 8px; background: #d4a040;
+  border-radius: 2px; display: inline-block; flex-shrink: 0;
+  box-shadow: 0 0 6px #d4a04080;
+}
 .chart-legend {
-  display: flex; gap: 10px; align-items: center;
-  font-size: 9px; color: rgba(255,255,255,.25);
+  display: flex; gap: 14px; align-items: center;
+  font-size: 10px; font-weight: 500;
+  color: rgba(255,255,255,.45); flex-shrink: 0;
 }
-.leg-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.leg-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; flex-shrink: 0;
+  box-shadow: 0 0 5px currentColor;
+}
 .chart-wrap { flex: 1; min-height: 0; position: relative; }
 .chart-wrap canvas { position: absolute; inset: 0; }
 </style>
