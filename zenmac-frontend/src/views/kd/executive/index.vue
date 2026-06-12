@@ -319,8 +319,8 @@ export default {
       };
     },
     stats() {
-      const d=this.monthData.filter(r=>r.flow!==null);
-      if(!d.length) return {totalFlow:0,serumTotal:0,latexTotal:0,kwhTotal:0,avgORPSerum:'—',avgORPLatex:'—',efficiency:'—',totalCost:'—',bestDay:{day:'—',flow:0}};
+      const d=this.monthData.filter(r=>r.flow!=null||(r.serum!=null&&r.kwh!=null));
+      if(!d.length) return {totalFlow:0,serumTotal:0,latexTotal:0,kwhTotal:0,kwh1Total:0,kwh2Total:0,avgORPSerum:'—',avgORPLatex:'—',efficiency:'—',totalCost:'—',bestDay:{day:'—',flow:0}};
       const totalFlow=d.reduce((a,r)=>a+r.flow,0);
       const serumTotal=d.reduce((a,r)=>a+r.serum,0);
       const latexTotal=d.reduce((a,r)=>a+r.latex,0);
@@ -338,7 +338,7 @@ export default {
     },
     kpiCards() {
       const s=this.stats, t=this.t;
-      const count=this.monthData.filter(r=>r.flow!==null).length;
+      const count=this.monthData.filter(r=>r.flow!=null).length;
       const orpAvg=parseInt(s.avgORPSerum)+parseInt(s.avgORPLatex);
       const orpCombined=isNaN(orpAvg)?'—':Math.round(orpAvg/2);
       const tc=parseInt(s.totalCost)||0;
@@ -379,7 +379,7 @@ export default {
     },
     treatPerfCards() {
       const s=this.stats, t=this.t;
-      const d=this.monthData.filter(r=>r.flow!==null&&r.kwh!==null);
+      const d=this.monthData.filter(r=>r.flow!=null&&r.kwh!=null);
       if(!d.length) return [];
       const effVal    = s.kwhTotal ? s.totalFlow/s.kwhTotal : 0;
       const costVal   = s.totalFlow ? (s.kwhTotal*this.costRate)/s.totalFlow : 0;
@@ -426,7 +426,7 @@ export default {
         { tag:'ANNUAL ENERGY',     big:this.fmt0(s.kwhTotal),    unit:'kWh',  color:t.kwh,    chips:[{label:'TB-01',val:this.fmt0(s.kwh1Total),color:t.kwh},{label:'TB-02',val:this.fmt0(s.kwh2Total),color:t.cost}] },
         { tag:'AVG EFFICIENCY',    big:eff,                       unit:'m³/kWh',color:t.perf,  chips:[], foot:'Annual Flow ÷ Energy' },
         { tag:'EST. ANNUAL COST',  big:this.fmt0(s.totalCost),   unit:'฿',    color:t.cost,   chips:[], foot:`${s.months} months · ${this.costRate} ฿/kWh` },
-        { tag:'ORP ACHIEVEMENT',   big:orpAch,                   unit:'%',    color:orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit, chips:[{label:'Serum avg',val:s.avgOrpS+' mV',color:t.orpS},{label:'Latex avg',val:s.avgOrpL+' mV',color:t.orpL}] },
+        { tag:'ORP ACHIEVEMENT',   big:orpAch,                   unit:'%',    color:orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit, chips:[{label:'Serum avg',val:(s.avgOrpS??'—')+' mV',color:t.orpS},{label:'Latex avg',val:(s.avgOrpL??'—')+' mV',color:t.orpL}] },
       ];
     },
     annualTreatPerfCards() {
@@ -457,7 +457,7 @@ export default {
     activeTreatPerfCards() { return this.viewMode==='annual' ? this.annualTreatPerfCards : this.treatPerfCards; },
     orpBarStats() {
       const s=this.stats, t=this.t;
-      const d=this.monthData.filter(r=>r.flow!==null);
+      const d=this.monthData.filter(r=>r.flow!=null);
       const orpOk=d.filter(r=>r.orp_serum>this.threshORP&&r.orp_latex>this.threshORP).length;
       const ach=d.length?Math.round(orpOk/d.length*100):0;
       const achColor=ach>=70?t.hOk:ach>=40?t.hWarn:t.hCrit;
@@ -505,6 +505,7 @@ export default {
     orpCls(v)   { const n=parseInt(v); if(isNaN(n))return''; return n>200?'h-ok':n>0?'h-warn':'h-crit'; },
     destroyCharts() {
       [this._chartMain,this._chartORP,this._chartPerf,this._chartBlower].forEach(c=>c?.destroy());
+      this._chartMain=this._chartORP=this._chartPerf=this._chartBlower=null;
     },
     switchTheme(key) { this.currentThemeKey=key; },
     async changeMonth(dir) {
@@ -516,6 +517,7 @@ export default {
         this.monthData = res.data && res.data.length ? res.data : genMonthData(this.monthOffset);
       } catch { this.monthData = genMonthData(this.monthOffset); }
       [this._chartPerf,this._chartBlower,this._chartORP,this._chartMain].forEach(c=>c?.destroy());
+      this._chartMain=this._chartORP=this._chartPerf=this._chartBlower=null;
       this.$nextTick(()=>this.buildMonthlyCharts());
     },
     getChartData() {
@@ -530,7 +532,7 @@ export default {
         orp_serum: d.map(r=>r.orp_serum),
         orp_latex: d.map(r=>r.orp_latex),
         perf:      d.map(r=>r.flow?+(r.kwh/r.flow).toFixed(3):null),
-        cost:      d.map(r=>r.kwh!==null?+(r.kwh*rate).toFixed(0):null),
+        cost:      d.map(r=>r.kwh!=null?+(r.kwh*rate).toFixed(0):null),
         treatEff:  d.map(r=>r.flow&&r.kwh?+(r.flow/r.kwh).toFixed(3):null),
         costPerM3: d.map(r=>r.flow&&r.kwh?+(r.kwh*rate/r.flow).toFixed(1):null),
       };
@@ -569,7 +571,7 @@ export default {
         kwh2:      d.map(r=>r.kwh2),
         orp_serum: d.map(r=>r.orp_serum),
         orp_latex: d.map(r=>r.orp_latex),
-        cost:      d.map(r=>r.kwh!==null?+(r.kwh*rate).toFixed(0):null),
+        cost:      d.map(r=>r.kwh!=null?+(r.kwh*rate).toFixed(0):null),
         treatEff:  d.map(r=>r.flow&&r.kwh?+(r.flow/r.kwh).toFixed(3):null),
         costPerM3: d.map(r=>r.flow&&r.kwh?+(r.kwh*rate/r.flow).toFixed(1):null),
       };
