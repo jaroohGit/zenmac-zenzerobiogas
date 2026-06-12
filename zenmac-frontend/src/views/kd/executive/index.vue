@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <!-- ── KPI GRID 5 cards ── -->
+    <!-- ── KPI GRID 6 cards ── -->
     <div class="kpi-grid">
       <div class="kpi-card" v-for="k in activeKpiCards" :key="k.tag" :style="`--c:${k.color}`">
         <div class="kpi-tag">{{ k.tag }}</div>
@@ -38,6 +38,10 @@
           <span class="kpi-big" :style="`color:${k.color}`">{{ k.big }}</span>
           <span class="kpi-unit-b" :style="`color:${k.color}`">{{ k.unit }}</span>
         </div>
+        <div class="kpi-mom" v-if="k.mom" :style="`color:${k.mom.color}`">
+          {{ k.mom.arrow }} {{ k.mom.pct }}%<span class="kpi-mom-vs"> vs {{ k.momLabel }}</span>
+        </div>
+        <div class="kpi-proj" v-if="k.proj">คาด ~{{ k.proj }} {{ k.projUnit }}</div>
         <div class="kpi-chips" v-if="k.chips && k.chips.length">
           <span class="kpi-chip" v-for="c in k.chips" :key="c.label" :style="`color:${c.color}`">{{ c.label }}: {{ c.val }}</span>
         </div>
@@ -279,7 +283,7 @@ const RPAD  = 50; // right padding for charts without a right axis — keeps X-a
 export default {
   name: 'KDExecutive',
   data() {
-    return { monthOffset:0, monthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, currentThemeKey:'slate', THEMES };
+    return { monthOffset:0, monthData:[], prevMonthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, currentThemeKey:'slate', THEMES };
   },
   watch: {
     costRate() {
@@ -356,44 +360,73 @@ export default {
       const best=d.reduce((a,r)=>r.flow>a.flow?r:a,d[0]);
       return {totalFlow,serumTotal,latexTotal,kwhTotal,kwh1Total,kwh2Total,avgORPSerum,avgORPLatex,efficiency,totalCost,bestDay:best};
     },
+    prevStats() {
+      const d = this.prevMonthData.filter(r => r.flow!=null || (r.serum!=null && r.kwh!=null));
+      if (!d.length) return null;
+      const totalFlow  = d.reduce((a,r) => a + (r.flow ?? ((r.serum||0)+(r.latex||0))), 0);
+      const kwhTotal   = d.reduce((a,r) => a + (r.kwh||0), 0);
+      const orpSD = d.filter(r => r.orp_serum!=null);
+      const orpLD = d.filter(r => r.orp_latex!=null);
+      const avgORPSerum = orpSD.length ? orpSD.reduce((a,r)=>a+r.orp_serum,0)/orpSD.length : null;
+      const avgORPLatex = orpLD.length ? orpLD.reduce((a,r)=>a+r.orp_latex,0)/orpLD.length : null;
+      const totalCost  = kwhTotal * this.costRate;
+      const efficiency = kwhTotal ? totalFlow / kwhTotal : null;
+      return { totalFlow, kwhTotal, avgORPSerum, avgORPLatex, totalCost, efficiency };
+    },
+    prevMonthLabel() {
+      const d = new Date();
+      d.setMonth(d.getMonth() - this.monthOffset - 1);
+      return d.toLocaleString('en', { month: 'short' });
+    },
     kpiCards() {
-      const s=this.stats, t=this.t;
-      const count=this.monthData.filter(r=>r.flow!=null).length;
-      const orpAvg=parseInt(s.avgORPSerum)+parseInt(s.avgORPLatex);
-      const orpCombined=isNaN(orpAvg)?'—':Math.round(orpAvg/2);
-      const tc=parseInt(s.totalCost)||0;
-      const costD=this.fmt0(count?Math.round(tc/count):0);
+      const s = this.stats, t = this.t, ps = this.prevStats;
+      const prevLabel   = this.prevMonthLabel;
+      const daysInMonth = this.monthData.length;
+      const dataCount   = this.monthData.filter(r => r.flow!=null).length;
+      const showProj    = this.monthOffset===0 && dataCount>0 && dataCount<daysInMonth;
+      const proj  = (val) => showProj && val ? this.fmt0(Math.round(val/dataCount*daysInMonth)) : null;
+      const mom   = (cur, prev, hib) => this._momTag(cur, prev, hib);
+      const tc    = parseInt(s.totalCost) || 0;
+      const costD = this.fmt0(dataCount ? Math.round(tc/dataCount) : 0);
+      const orpAvg = parseInt(s.avgORPSerum) + parseInt(s.avgORPLatex);
+      const orpCombined  = isNaN(orpAvg) ? '—' : Math.round(orpAvg/2);
+      const costPerM3    = s.totalFlow ? (tc/s.totalFlow) : null;
+      const prevCostPerM3= ps && ps.totalFlow ? ps.totalCost/ps.totalFlow : null;
+      const prevOrpAvg   = ps && ps.avgORPSerum!=null && ps.avgORPLatex!=null
+        ? (ps.avgORPSerum+ps.avgORPLatex)/2 : null;
       return [
         {
           tag:'TOTAL FLOW', big:this.fmt0(s.totalFlow), unit:'m³', color:t.accent,
-          chips:[
-            {label:'Serum', val:this.fmt0(s.serumTotal), color:t.serum},
-            {label:'Latex', val:this.fmt0(s.latexTotal), color:t.latex},
-          ],
+          chips:[{label:'Serum',val:this.fmt0(s.serumTotal),color:t.serum},{label:'Latex',val:this.fmt0(s.latexTotal),color:t.latex}],
+          mom:mom(s.totalFlow, ps?.totalFlow, true), momLabel:prevLabel,
+          proj:proj(s.totalFlow), projUnit:'m³',
         },
         {
           tag:'TOTAL ENERGY', big:this.fmt0(s.kwhTotal), unit:'kWh', color:t.kwh,
-          chips:[
-            {label:'TB-01', val:this.fmt0(s.kwh1Total), color:t.kwh},
-            {label:'TB-02', val:this.fmt0(s.kwh2Total), color:t.cost},
-          ],
+          chips:[{label:'TB-01',val:this.fmt0(s.kwh1Total),color:t.kwh},{label:'TB-02',val:this.fmt0(s.kwh2Total),color:t.cost}],
+          mom:mom(s.kwhTotal, ps?.kwhTotal, false), momLabel:prevLabel,
+          proj:proj(s.kwhTotal), projUnit:'kWh',
         },
         {
           tag:'PERFORMANCE', big:s.efficiency, unit:'m³/kWh', color:t.perf,
-          chips:[],
           foot:'Flow ÷ Energy — Higher is Better',
+          mom:mom(parseFloat(s.efficiency), ps?.efficiency, true), momLabel:prevLabel,
         },
         {
           tag:'EST. ENERGY COST', big:this.fmt0(s.totalCost), unit:'฿', color:t.cost,
-          chips:[],
           foot:`${this.fmt0(tc)} ฿/month  ·  ${costD} ฿/day avg`,
+          mom:mom(tc, ps?.totalCost, false), momLabel:prevLabel,
+          proj:proj(tc), projUnit:'฿',
+        },
+        {
+          tag:'COST / m³', big:costPerM3!=null?costPerM3.toFixed(2):'—', unit:'฿/m³', color:t.hWarn,
+          foot:'Energy Cost ÷ Total Flow',
+          mom:mom(costPerM3, prevCostPerM3, false), momLabel:prevLabel,
         },
         {
           tag:'ORP AVERAGE', big:orpCombined, unit:'mV', color:t.orpS,
-          chips:[
-            {label:'Serum', val:`${s.avgORPSerum} mV`, color:t.orpS},
-            {label:'Latex', val:`${s.avgORPLatex} mV`, color:t.orpL},
-          ],
+          chips:[{label:'Serum',val:`${s.avgORPSerum} mV`,color:t.orpS},{label:'Latex',val:`${s.avgORPLatex} mV`,color:t.orpL}],
+          mom:mom(typeof orpCombined==='number'?orpCombined:null, prevOrpAvg, true), momLabel:prevLabel,
         },
       ];
     },
@@ -444,6 +477,7 @@ export default {
         { tag:'ANNUAL ENERGY',     big:this.fmt0(s.kwhTotal),    unit:'kWh',  color:t.kwh,    chips:[{label:'TB-01',val:this.fmt0(s.kwh1Total),color:t.kwh},{label:'TB-02',val:this.fmt0(s.kwh2Total),color:t.cost}] },
         { tag:'AVG EFFICIENCY',    big:eff,                       unit:'m³/kWh',color:t.perf,  chips:[], foot:'Annual Flow ÷ Energy' },
         { tag:'EST. ANNUAL COST',  big:this.fmt0(s.totalCost),   unit:'฿',    color:t.cost,   chips:[], foot:`${s.months} months · ${this.costRate} ฿/kWh` },
+        { tag:'COST / m³',         big:s.totalFlow?(s.kwhTotal*this.costRate/s.totalFlow).toFixed(2):'—', unit:'฿/m³', color:t.hWarn, chips:[], foot:'Annual Energy Cost ÷ Total Flow' },
         { tag:'ORP ACHIEVEMENT',   big:orpAch,                   unit:'%',    color:orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit, chips:[{label:'Serum avg',val:(s.avgOrpS??'—')+' mV',color:t.orpS},{label:'Latex avg',val:(s.avgOrpL??'—')+' mV',color:t.orpL}] },
       ];
     },
@@ -507,6 +541,13 @@ export default {
       const res = await axios.get(`${API}/api/kd/history/daily?month=${ym}`);
       this.monthData = res.data && res.data.length ? res.data : genMonthData(0);
     } catch { this.monthData = genMonthData(0); }
+    // Fetch previous month for MoM delta — TODO: verify API returns complete historical rows
+    const prevD = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const ymp = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}`;
+    try {
+      const rp = await axios.get(`${API}/api/kd/history/daily?month=${ymp}`);
+      this.prevMonthData = rp.data && rp.data.length ? rp.data : genMonthData(1);
+    } catch { this.prevMonthData = genMonthData(1); }
     try {
       const res = await axios.get(`${API}/api/kd/history/monthly?year=${now.getFullYear()}`);
       this.annualData = res.data && res.data.length ? res.data : genAnnualData();
@@ -519,6 +560,13 @@ export default {
     pct(a,b)    { return b?((a/b)*100).toFixed(1):'0'; },
     orpLabel(v) { const n=parseInt(v); if(isNaN(n))return''; return n>200?'GOOD':n>0?'LOW':'CRITICAL'; },
     orpCls(v)   { const n=parseInt(v); if(isNaN(n))return''; return n>200?'h-ok':n>0?'h-warn':'h-crit'; },
+    _momTag(cur, prev, higherIsBetter) {
+      const a=parseFloat(cur), b=parseFloat(prev);
+      if (isNaN(a)||isNaN(b)||b===0) return null;
+      const pct=(a-b)/Math.abs(b)*100;
+      const good=higherIsBetter?pct>0:pct<0;
+      return { arrow:pct>=0?'▲':'▼', pct:Math.abs(pct).toFixed(1), color:good?this.t.hOk:this.t.hCrit };
+    },
     destroyCharts() {
       [this._chartMain,this._chartORP,this._chartPerf,this._chartBlower].forEach(c=>c?.destroy());
       this._chartMain=this._chartORP=this._chartPerf=this._chartBlower=null;
@@ -532,6 +580,12 @@ export default {
         const res = await axios.get(`${API}/api/kd/history/daily?month=${ym}`);
         this.monthData = res.data && res.data.length ? res.data : genMonthData(this.monthOffset);
       } catch { this.monthData = genMonthData(this.monthOffset); }
+      const pd = new Date(); pd.setMonth(pd.getMonth()-this.monthOffset-1);
+      const ymp = `${pd.getFullYear()}-${String(pd.getMonth()+1).padStart(2,'0')}`;
+      try {
+        const rp = await axios.get(`${API}/api/kd/history/daily?month=${ymp}`);
+        this.prevMonthData = rp.data && rp.data.length ? rp.data : genMonthData(this.monthOffset+1);
+      } catch { this.prevMonthData = genMonthData(this.monthOffset+1); }
       [this._chartPerf,this._chartBlower,this._chartORP,this._chartMain].forEach(c=>c?.destroy());
       this._chartMain=this._chartORP=this._chartPerf=this._chartBlower=null;
       this.$nextTick(()=>this.buildMonthlyCharts());
@@ -718,9 +772,9 @@ export default {
 .demo-tag { font-size:9px; font-weight:700; padding:1px 7px; border-radius:3px; background:var(--ex-tag-bg); color:var(--ex-tag-color); border:1px solid var(--ex-tag-bdr); letter-spacing:.07em; }
 
 /* ── KPI Grid ── */
-.kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; flex-shrink:0; background:var(--ex-card-bdr); border-radius:8px; overflow:hidden; }
+.kpi-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:1px; flex-shrink:0; background:var(--ex-card-bdr); border-radius:8px; overflow:hidden; }
 .kpi-card {
-  display:flex; flex-direction:column; gap:6px;
+  display:flex; flex-direction:column; gap:4px;
   background: linear-gradient(
     110deg,
     color-mix(in srgb, var(--c) 14%, var(--ex-card-bg)) 0%,
@@ -728,7 +782,7 @@ export default {
   );
   border-left:3px solid var(--c);
   box-shadow: inset 0 0 22px color-mix(in srgb, var(--c) 6%, transparent);
-  padding:12px 16px;
+  padding:9px 12px;
   transition:background .2s, filter .15s;
 }
 .kpi-card:hover {
@@ -740,12 +794,15 @@ export default {
   );
 }
 .kpi-tag { font-size:9px; font-weight:700; color:var(--ex-text-sub); letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.kpi-big-row { display:flex; align-items:baseline; gap:6px; }
-.kpi-big { font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:700; line-height:1; }
-.kpi-unit-b { font-size:14px; font-weight:600; }
-.kpi-chips { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
-.kpi-chip { font-family:'JetBrains Mono',monospace; font-size:9px; padding:2px 8px; border-radius:3px; background:var(--ex-tag-bg); border:1px solid var(--ex-tag-bdr); white-space:nowrap; }
-.kpi-foot { font-size:9px; color:var(--ex-text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kpi-big-row { display:flex; align-items:baseline; gap:5px; }
+.kpi-big { font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; line-height:1; }
+.kpi-unit-b { font-size:11px; font-weight:600; }
+.kpi-mom { font-size:10px; font-weight:700; display:flex; align-items:center; gap:2px; }
+.kpi-mom-vs { font-size:8px; font-weight:500; opacity:.6; }
+.kpi-proj { font-size:8px; color:var(--ex-text-sub); opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kpi-chips { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.kpi-chip { font-family:'JetBrains Mono',monospace; font-size:8px; padding:1px 6px; border-radius:3px; background:var(--ex-tag-bg); border:1px solid var(--ex-tag-bdr); white-space:nowrap; }
+.kpi-foot { font-size:8px; color:var(--ex-text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .h-ok   { color:var(--ex-h-ok) !important; }
 .h-warn { color:var(--ex-h-warn) !important; }
 .h-crit { color:var(--ex-h-crit) !important; }
