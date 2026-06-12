@@ -26,7 +26,7 @@ echo ""
 # ── Step 1: Build Demo-control ──────────────────────────────────────────────
 echo "▶ [1/4] Building Demo-control (base=/rnd/) ..."
 cd "$DEMO_DIR"
-npm run build -- --base=/rnd/
+MSYS_NO_PATHCONV=1 npm run build -- --base=/rnd/
 echo "  ✓ Build complete"
 echo ""
 
