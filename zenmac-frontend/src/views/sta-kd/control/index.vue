@@ -140,6 +140,7 @@
                 <th>ORP HIGH (mV)</th>
                 <th>BLOWER FLOW (%)</th>
                 <th>BLOWER FLOW (m³/hr)</th>
+                <th class="th-cmm">TURBO FLOW SET (CMM)</th>
                 <th>STATUS</th>
               </tr>
             </thead>
@@ -152,6 +153,7 @@
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_hi" :style="`color:${b.color}`" /></td>
                 <td><input type="number" class="arp-inp" v-model.number="b.flow_pct" min="0" max="100" /></td>
                 <td><input type="number" class="arp-inp" v-model.number="b.flow_m3" min="0" max="9999" /></td>
+                <td><input type="number" class="arp-inp arp-inp-cmm" v-model.number="b.flow_cmm" min="0" max="200" step="0.1" /></td>
                 <td>
                   <span class="arp-status" :class="i===activeSerumBand ? 'arp-active' : 'arp-idle'">
                     {{ i===activeSerumBand ? '● ACTIVE' : 'IDLE' }}
@@ -212,6 +214,7 @@
                 <th>ORP HIGH (mV)</th>
                 <th>BLOWER FLOW (%)</th>
                 <th>BLOWER FLOW (m³/hr)</th>
+                <th class="th-cmm">TURBO FLOW SET (CMM)</th>
                 <th>STATUS</th>
               </tr>
             </thead>
@@ -224,6 +227,7 @@
                 <td><input type="number" class="arp-inp" v-model.number="b.orp_hi" :style="`color:${b.color}`" /></td>
                 <td><input type="number" class="arp-inp" v-model.number="b.flow_pct" min="0" max="100" /></td>
                 <td><input type="number" class="arp-inp" v-model.number="b.flow_m3" min="0" max="9999" /></td>
+                <td><input type="number" class="arp-inp arp-inp-cmm" v-model.number="b.flow_cmm" min="0" max="200" step="0.1" /></td>
                 <td>
                   <span class="arp-status" :class="i===activeLatexBand ? 'arp-active' : 'arp-idle'">
                     {{ i===activeLatexBand ? '● ACTIVE' : 'IDLE' }}
@@ -267,11 +271,11 @@
 import { mapGetters } from 'vuex';
 
 const DEFAULT_BANDS = () => [
-  { zone:'HH', color:'#dd4444', orp_lo:150,  orp_hi:999,  flow_pct:20,  flow_m3:1200 },
-  { zone:'H',  color:'#cc8833', orp_lo:75,   orp_hi:150,  flow_pct:45,  flow_m3:2700 },
-  { zone:'ZERO',color:'#2a8a7a',orp_lo:-75,  orp_hi:75,   flow_pct:65,  flow_m3:3800 },
-  { zone:'L',  color:'#44aa55', orp_lo:-150, orp_hi:-75,  flow_pct:85,  flow_m3:5000 },
-  { zone:'LL', color:'#8844cc', orp_lo:-999, orp_hi:-150, flow_pct:100, flow_m3:6000 },
+  { zone:'HH', color:'#dd4444', orp_lo:150,  orp_hi:999,  flow_pct:20,  flow_m3:1200, flow_cmm:20.0 },
+  { zone:'H',  color:'#cc8833', orp_lo:75,   orp_hi:150,  flow_pct:45,  flow_m3:2700, flow_cmm:45.0 },
+  { zone:'ZERO',color:'#2a8a7a',orp_lo:-75,  orp_hi:75,   flow_pct:65,  flow_m3:3800, flow_cmm:63.3 },
+  { zone:'L',  color:'#44aa55', orp_lo:-150, orp_hi:-75,  flow_pct:85,  flow_m3:5000, flow_cmm:83.3 },
+  { zone:'LL', color:'#8844cc', orp_lo:-999, orp_hi:-150, flow_pct:100, flow_m3:6000, flow_cmm:100.0 },
 ];
 
 export default {
@@ -470,6 +474,14 @@ export default {
   outline: none; text-align: center; transition: border-color .15s;
 }
 .arp-inp:focus { border-color: rgba(0,212,255,.4); background: rgba(22,35,55,.9); }
+.th-cmm { color: var(--cyan) !important; letter-spacing: .08em; }
+.arp-inp-cmm {
+  color: var(--cyan) !important;
+  border-color: rgba(0,212,255,.25) !important;
+  background: rgba(0,212,255,.06) !important;
+  width: 76px;
+}
+.arp-inp-cmm:focus { border-color: rgba(0,212,255,.6) !important; background: rgba(0,212,255,.12) !important; }
 
 .arp-status {
   font-size: 9px; font-weight: 700; padding: 3px 9px;
