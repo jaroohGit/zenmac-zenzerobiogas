@@ -76,30 +76,149 @@
     </div>
 
     <!-- ══ TAB 3: TURNING POINTS ══ -->
-    <div v-if="activeTab === 'turning'" class="kd-turning-card">
-      <div class="kd-ctrl-title" style="margin-bottom:14px"><div class="kd-ctrl-dot" style="background:var(--purple)"></div>Turning Point Timeline</div>
-      <div class="kd-tp-timeline">
-        <div v-for="(tp, i) in turningPoints" :key="i" class="kd-tp-item">
-          <div class="kd-tp-num">TP{{ i + 1 }}</div>
-          <div class="kd-tp-fields">
-            <div class="kd-tp-field">
-              <label class="kd-tp-lbl">TIME</label>
-              <input v-model="tp.time" class="kd-tp-input" type="time" />
-            </div>
-            <div class="kd-tp-field">
-              <label class="kd-tp-lbl">ORP TARGET</label>
-              <input v-model.number="tp.orp" class="kd-tp-input" type="number" style="width:70px" />
-            </div>
-            <div class="kd-tp-field">
-              <label class="kd-tp-lbl">SPEED %</label>
-              <input v-model.number="tp.speed" class="kd-tp-input" type="number" style="width:60px" />
-            </div>
-          </div>
-          <div class="kd-tp-marker"></div>
+    <div v-if="activeTab === 'turning'" class="lp-wrap">
+
+      <!-- ── Loop Timeline Visualization ── -->
+      <div class="lp-chart-card">
+        <div class="lp-chart-hdr">
+          <div class="lp-chart-accent"></div>
+          <span class="lp-chart-title">LOOP TIMELINE VISUALIZATION</span>
+          <span class="lp-chart-dur">Loop duration: {{ activeLoopParams.loopDuration }} hr</span>
         </div>
+
+        <div class="lp-phase-bar">
+          <div class="lp-phase-seg lp-phase-rise" :style="`flex:${riseHr}`">
+            <span>↑ RISE~{{ riseHr.toFixed(1) }}hr</span>
+          </div>
+          <div class="lp-phase-seg lp-phase-hold" :style="`flex:${(activeLoopParams.holdHigh||90)/60}`">
+            <span>⏸ HOLD HIGH{{ activeLoopParams.holdHigh }}min</span>
+          </div>
+          <div class="lp-phase-seg lp-phase-drop" :style="`flex:${activeLoopParams.dropDuration||3}`">
+            <span>↓ DROP~{{ activeLoopParams.dropDuration||3 }}hr</span>
+          </div>
+          <div class="lp-phase-seg lp-phase-mid" :style="`flex:${(activeLoopParams.middleDuration||60)/60}`">
+            <span>= MIDDLE{{ activeLoopParams.middleDuration }}min</span>
+          </div>
+          <div class="lp-phase-seg lp-phase-rise" style="flex:0.4;opacity:.5">
+            <span>↑ next+</span>
+          </div>
+        </div>
+
+        <canvas ref="loopCanvas" class="lp-canvas"></canvas>
       </div>
-      <button class="kd-save-btn kd-save-cyan" style="margin-top:14px" @click="saveTurning">SAVE TURNING POINTS</button>
-    </div>
+
+      <!-- ── Loop Parameters ── -->
+      <div class="lp-params-card">
+        <div class="lp-params-hdr">
+          <div class="lp-chart-accent" style="background:linear-gradient(180deg,#a855f7,#a855f755)"></div>
+          <span class="lp-params-title">LOOP PARAMETERS</span>
+          <span class="lp-params-sub">ตั้งค่าแยก On-Peak / Off-Peak</span>
+        </div>
+
+        <!-- Time range pickers -->
+        <div class="lp-time-row">
+          <div class="lp-time-group">
+            <i class="bx bx-bell lp-time-icon" style="color:#ffcc44"></i>
+            <span class="lp-time-lbl">On-Peak :</span>
+            <input type="time" v-model="onPeak.startTime" class="lp-time-inp" />
+            <span class="lp-time-arrow">→</span>
+            <input type="time" v-model="onPeak.endTime" class="lp-time-inp" />
+          </div>
+          <div class="lp-time-sep"></div>
+          <div class="lp-time-group">
+            <i class="bx bx-moon lp-time-icon" style="color:#aa88ff"></i>
+            <span class="lp-time-lbl">Off-Peak :</span>
+            <input type="time" v-model="offPeak.startTime" class="lp-time-inp" />
+            <span class="lp-time-arrow">→</span>
+            <input type="time" v-model="offPeak.endTime" class="lp-time-inp" />
+          </div>
+        </div>
+
+        <!-- ON-PEAK / OFF-PEAK toggle -->
+        <div class="lp-tab-bar">
+          <button class="lp-tab-btn" :class="loopTab==='on-peak'?'lp-tab-on':''" @click="loopTab='on-peak'">
+            <i class="bx bx-sun"></i> ON-PEAK
+          </button>
+          <button class="lp-tab-btn" :class="loopTab==='off-peak'?'lp-tab-off':''" @click="loopTab='off-peak'">
+            <i class="bx bx-moon"></i> OFF-PEAK
+          </button>
+        </div>
+
+        <!-- 4×2 Parameter grid -->
+        <div class="lp-param-grid">
+          <div class="lp-param-card">
+            <div class="lp-param-lbl">ORP TARGET HIGH (HH)</div>
+            <div class="lp-param-inp-row">
+              <input type="number" class="lp-param-inp lp-inp-amber" v-model.number="activeLoopParams.orpHigh" />
+              <span class="lp-param-unit">mV</span>
+            </div>
+            <div class="lp-param-desc">เป้าหมาย Rise phase</div>
+          </div>
+          <div class="lp-param-card">
+            <div class="lp-param-lbl">HOLD TIME AT HIGH</div>
+            <div class="lp-param-inp-row">
+              <input type="number" class="lp-param-inp lp-inp-cyan" v-model.number="activeLoopParams.holdHigh" />
+              <span class="lp-param-unit">min</span>
+            </div>
+            <div class="lp-param-desc">คงที่ที่ High ก่อน Drop</div>
+          </div>
+
+          <div class="lp-param-card">
+            <div class="lp-param-lbl">BLOWER MIN % (DROP)</div>
+            <div class="lp-param-inp-row">
+              <input type="number" class="lp-param-inp lp-inp-green" v-model.number="activeLoopParams.blowerMin" />
+              <span class="lp-param-unit">%</span>
+            </div>
+            <div class="lp-param-desc">หรี่สุด Drop phase</div>
+          </div>
+          <div class="lp-param-card">
+            <div class="lp-param-lbl">ORP TARGET LOW (LL)</div>
+            <div class="lp-param-inp-row">
+              <input type="number" class="lp-param-inp lp-inp-purple" v-model.number="activeLoopParams.orpLow" />
+              <span class="lp-param-unit">mV</span>
+            </div>
+            <div class="lp-param-desc">เป้าหมาย Drop phase</div>
+          </div>
+
+          <div class="lp-param-card">
+            <div class="lp-param-lbl">MIDDLE DURATION</div>
+            <div class="lp-param-inp-row">
+              <input type="number" class="lp-param-inp lp-inp-purple" v-model.number="activeLoopParams.middleDuration" />
+              <span class="lp-param-unit">min</span>
+            </div>
+            <div class="lp-param-desc">คงค่ากลาง ก่อน Rise ใหม่</div>
+          </div>
+          <div class="lp-param-card">
+            <div class="lp-param-lbl">BLOWER MID % (MIDDLE)</div>
+            <div class="lp-param-inp-row">
+              <input type="number" class="lp-param-inp lp-inp-cyan" v-model.number="activeLoopParams.blowerMid" />
+              <span class="lp-param-unit">%</span>
+            </div>
+            <div class="lp-param-desc">กำลัง Blower ใน Middle phase</div>
+          </div>
+
+          <div class="lp-param-card">
+            <div class="lp-param-lbl">LOOP DURATION</div>
+            <div class="lp-param-inp-row">
+              <input type="number" class="lp-param-inp lp-inp-cyan" v-model.number="activeLoopParams.loopDuration" />
+              <span class="lp-param-unit">hr</span>
+            </div>
+            <div class="lp-param-desc">ระยะเวลา 1 Loop รวม</div>
+          </div>
+          <div class="lp-param-card">
+            <div class="lp-param-lbl">BLOWER MAX % (RISE)</div>
+            <div class="lp-param-inp-row">
+              <input type="number" class="lp-param-inp lp-inp-amber" v-model.number="activeLoopParams.blowerMax" />
+              <span class="lp-param-unit">%</span>
+            </div>
+            <div class="lp-param-desc">กำลัง Blower สูงสุดใน Rise</div>
+          </div>
+        </div>
+
+        <button class="kd-save-btn kd-save-cyan" @click="saveTurning">SAVE LOOP PARAMETERS</button>
+      </div>
+
+    </div><!-- /turning tab -->
 
     <!-- ══ TAB 4: AIRFLOW-ORP MODE ══ -->
     <div v-if="activeTab === 'airflow'" class="arp-wrap">
@@ -324,13 +443,21 @@ export default {
       proc:  { orpTarget: 50, orpHi: 120, orpLo: -50 },
       serum: { orpTarget: 30, orpHi: 100, orpLo: -60 },
       loop:  { interval: 5, deadband: 10, minSpeed: 30, maxSpeed: 100 },
-      turningPoints: [
-        { time: '06:00', orp: 30, speed: 60 },
-        { time: '09:00', orp: 50, speed: 75 },
-        { time: '12:00', orp: 60, speed: 85 },
-        { time: '18:00', orp: 40, speed: 70 },
-        { time: '22:00', orp: 20, speed: 50 },
-      ],
+      loopTab: 'on-peak',
+      onPeak: {
+        startTime: '06:00', endTime: '10:00',
+        orpHigh: 150, orpLow: -150,
+        holdHigh: 90, dropDuration: 3,
+        blowerMin: 20, blowerMax: 95, blowerMid: 60,
+        middleDuration: 60, loopDuration: 12,
+      },
+      offPeak: {
+        startTime: '10:00', endTime: '06:00',
+        orpHigh: 120, orpLow: -120,
+        holdHigh: 60, dropDuration: 3,
+        blowerMin: 15, blowerMax: 80, blowerMid: 50,
+        middleDuration: 60, loopDuration: 12,
+      },
       // AIRFLOW-ORP MODE
       arpActive1: true,
       arpActive2: true,
@@ -340,6 +467,11 @@ export default {
   },
   computed: {
     ...mapGetters('staKd', ['processORP', 'serumORP', 'tb1Flow', 'tb2Flow']),
+    activeLoopParams() { return this.loopTab === 'on-peak' ? this.onPeak : this.offPeak; },
+    riseHr() {
+      const p = this.activeLoopParams;
+      return Math.max(0.5, (p.loopDuration||12) - (p.holdHigh||90)/60 - (p.dropDuration||3) - (p.middleDuration||60)/60);
+    },
     rtCmm1() { const n=parseFloat(this.tb1Flow); return isNaN(n)?null:+n.toFixed(1); },
     rtCmm2() { const n=parseFloat(this.tb2Flow); return isNaN(n)?null:+n.toFixed(1); },
     activeSerumBand() {
@@ -363,11 +495,142 @@ export default {
       return 4;
     },
   },
+  watch: {
+    activeTab(val) {
+      if (val === 'turning') this.$nextTick(this.drawLoopChart);
+    },
+    loopTab() {
+      if (this.activeTab === 'turning') this.$nextTick(this.drawLoopChart);
+    },
+    onPeak:  { deep: true, handler() { if (this.activeTab === 'turning') this.$nextTick(this.drawLoopChart); } },
+    offPeak: { deep: true, handler() { if (this.activeTab === 'turning') this.$nextTick(this.drawLoopChart); } },
+  },
   methods: {
     saveProc()    { alert('Process ORP settings saved (integration pending)'); },
     saveSerum()   { alert('Serum ORP settings saved (integration pending)'); },
     saveLoop()    { alert('Loop control settings saved (integration pending)'); },
-    saveTurning() { alert('Turning points saved (integration pending)'); },
+    saveTurning() { alert('Loop parameters saved (integration pending)'); },
+    drawLoopChart() {
+      const canvas = this.$refs.loopCanvas;
+      if (!canvas) return;
+      const W = canvas.offsetWidth;
+      const H = canvas.offsetHeight;
+      if (!W || !H) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width  = W * dpr;
+      canvas.height = H * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const p       = this.activeLoopParams;
+      const holdHr  = (p.holdHigh || 90) / 60;
+      const midHr   = (p.middleDuration || 60) / 60;
+      const dropHr  = p.dropDuration || 3;
+      const riseHr  = this.riseHr;
+      const orpHi   = p.orpHigh || 150;
+      const orpLo   = p.orpLow  || -150;
+      const orpSpan = orpHi - orpLo;
+
+      // display 1.45 cycles
+      const t0 = 0,  t1 = riseHr, t2 = t1 + holdHr, t3 = t2 + dropHr, t4 = t3 + midHr;
+      const displayEnd = t4 + riseHr * 0.45;
+
+      const PL = 52, PR = 12, PT = 22, PB = 14;
+      const cW = W - PL - PR, cH = H - PT - PB;
+      const yMin = orpLo - orpSpan * 0.18, yMax = orpHi + orpSpan * 0.18;
+
+      const xOf = hr => PL + (hr / displayEnd) * cW;
+      const yOf = mv => PT + (1 - (mv - yMin) / (yMax - yMin)) * cH;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Background gradient (subtle)
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+      bgGrad.addColorStop(0, 'rgba(30,50,30,.06)');
+      bgGrad.addColorStop(0.5, 'rgba(8,12,22,.0)');
+      bgGrad.addColorStop(1, 'rgba(60,20,80,.06)');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Reference lines
+      ctx.setLineDash([5, 5]);
+      ctx.lineWidth = 0.8;
+      [
+        { v: orpHi, color: 'rgba(204,136,51,.28)' },
+        { v: 0,     color: 'rgba(200,220,240,.1)'  },
+        { v: orpLo, color: 'rgba(136,68,204,.28)'  },
+      ].forEach(({ v, color }) => {
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(PL, yOf(v));
+        ctx.lineTo(W - PR, yOf(v));
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      // Y-axis labels
+      ctx.textBaseline = 'bottom';
+      ctx.font = `bold 9px monospace`;
+      [
+        { v: orpHi, text: `HIGH ${orpHi >= 0 ? '+' : ''}${orpHi}`, color: 'rgba(204,136,51,.75)' },
+        { v: 0,     text: 'MID _0',                                   color: 'rgba(200,220,240,.4)' },
+        { v: orpLo, text: `LOW ${orpLo}`,                             color: 'rgba(136,68,204,.75)' },
+      ].forEach(({ v, text, color }) => {
+        ctx.fillStyle = color;
+        ctx.fillText(text, 2, yOf(v) - 2);
+      });
+
+      // Helper: smooth bezier through point array
+      const bezier = (pts, color, lw = 2.5) => {
+        if (pts.length < 2) return;
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lw;
+        ctx.moveTo(xOf(pts[0].t), yOf(pts[0].v));
+        for (let i = 1; i < pts.length; i++) {
+          const a = pts[i - 1], b = pts[i];
+          const cx = (xOf(a.t) + xOf(b.t)) / 2;
+          ctx.bezierCurveTo(cx, yOf(a.v), cx, yOf(b.v), xOf(b.t), yOf(b.v));
+        }
+        ctx.stroke();
+      };
+
+      // RISE (green)
+      bezier([
+        { t: t0, v: 0 },
+        { t: t0 + riseHr * 0.25, v: orpHi * 0.1 },
+        { t: t0 + riseHr * 0.7,  v: orpHi * 0.85 },
+        { t: t1, v: orpHi },
+      ], '#44cc88');
+
+      // HOLD (teal flat)
+      bezier([{ t: t1, v: orpHi }, { t: t2, v: orpHi }], '#00b8d0');
+
+      // DROP (red → purple gradient)
+      const dg = ctx.createLinearGradient(xOf(t2), 0, xOf(t3), 0);
+      dg.addColorStop(0, '#dd4444'); dg.addColorStop(0.5, '#cc4488'); dg.addColorStop(1, '#9944bb');
+      ctx.beginPath(); ctx.strokeStyle = dg; ctx.lineWidth = 2.5;
+      ctx.moveTo(xOf(t2), yOf(orpHi));
+      const cx3 = (xOf(t2) + xOf(t3)) / 2;
+      ctx.bezierCurveTo(cx3, yOf(orpHi), cx3, yOf(orpLo), xOf(t3), yOf(orpLo));
+      ctx.stroke();
+
+      // MIDDLE (purple → mid 0)
+      bezier([
+        { t: t3, v: orpLo },
+        { t: t3 + midHr * 0.55, v: orpLo * 0.35 },
+        { t: t4, v: 0 },
+      ], '#9955dd');
+
+      // Next RISE (green, faded)
+      const t5 = t4 + riseHr * 0.45;
+      const frac = (t5 - t4) / riseHr;
+      bezier([
+        { t: t4, v: 0 },
+        { t: t4 + (t5 - t4) * 0.6, v: orpHi * frac * 0.55 },
+        { t: t5, v: orpHi * frac },
+      ], 'rgba(68,204,136,.55)', 2);
+    },
     saveArp(n) {
       const label = n === 1 ? 'BL-1 Serum' : 'BL-2 Latex';
       alert(`AIRFLOW-ORP MODE — ${label} settings saved (integration pending)`);
@@ -427,17 +690,144 @@ export default {
 .kd-save-green { background: rgba(0,232,122,.1); color: var(--green); border-color: rgba(0,232,122,.3); }
 .kd-save-green:hover { background: rgba(0,232,122,.18); }
 
-/* Turning Points */
-.kd-turning-card { background: rgba(10,14,20,.92); border: 1px solid var(--border2); border-radius: 11px; padding: 14px 16px; }
-.kd-tp-timeline { display: flex; flex-direction: column; gap: 8px; }
-.kd-tp-item { display: flex; align-items: center; gap: 14px; background: rgba(18,25,36,.55); border-radius: 7px; padding: 8px 12px; border-left: 3px solid rgba(168,85,247,.5); }
-.kd-tp-num { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--purple); width: 32px; }
-.kd-tp-fields { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.kd-tp-field { display: flex; flex-direction: column; gap: 2px; }
-.kd-tp-lbl { font-family: var(--font-mono); font-size: 8px; color: var(--text3); letter-spacing: .06em; }
-.kd-tp-input { font-family: var(--font-mono); font-size: 12px; font-weight: 700; background: rgba(18,28,44,.9); border: 1px solid var(--border2); color: var(--cyan); padding: 4px 8px; border-radius: 5px; outline: none; width: 90px; }
-.kd-tp-input:focus { border-color: rgba(0,212,255,.5); }
-.kd-tp-marker { flex: 1; height: 1px; background: rgba(168,85,247,.2); }
+/* ══ LOOP TIMELINE (Turning Points tab) ══ */
+.lp-wrap { display: flex; flex-direction: column; gap: 10px; }
+
+.lp-chart-card {
+  background: linear-gradient(155deg, rgba(12,18,30,.97) 0%, rgba(8,12,20,.99) 100%);
+  border: 1px solid rgba(255,255,255,.1); border-top: 1px solid rgba(255,255,255,.18);
+  border-radius: 12px; padding: 14px 16px; gap: 10px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.lp-chart-hdr { display: flex; align-items: center; gap: 10px; }
+.lp-chart-accent {
+  width: 3px; height: 22px; border-radius: 2px; flex-shrink: 0;
+  background: linear-gradient(180deg, #44cc88, #44cc8844);
+}
+.lp-chart-title {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 800;
+  letter-spacing: .1em; color: rgba(220,235,250,.9);
+}
+.lp-chart-dur {
+  margin-left: auto; font-family: var(--font-mono); font-size: 10px;
+  color: rgba(200,220,240,.35); letter-spacing: .05em;
+}
+
+.lp-phase-bar {
+  display: flex; border-radius: 6px; overflow: hidden; height: 28px;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 2px 10px rgba(0,0,0,.3);
+}
+.lp-phase-seg {
+  display: flex; align-items: center; justify-content: center; min-width: 0;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .05em;
+  border-right: 1px solid rgba(0,0,0,.3); overflow: hidden; transition: flex .35s;
+}
+.lp-phase-seg:last-child { border-right: none; }
+.lp-phase-seg span { white-space: nowrap; padding: 0 7px; }
+.lp-phase-rise { background: rgba(38,130,65,.55);  color: #88ffaa; }
+.lp-phase-hold { background: rgba(0,130,145,.5);   color: #88eeff; }
+.lp-phase-drop { background: rgba(130,38,38,.55);  color: #ffaaaa; }
+.lp-phase-mid  { background: rgba(100,38,160,.5);  color: #ddaaff; }
+
+.lp-canvas {
+  width: 100%; height: 165px; display: block;
+  border-radius: 6px; background: rgba(255,255,255,.015);
+}
+
+/* Parameters card */
+.lp-params-card {
+  background: linear-gradient(155deg, rgba(14,20,32,.97) 0%, rgba(9,13,22,.99) 100%);
+  border: 1px solid rgba(255,255,255,.1); border-top: 1px solid rgba(255,255,255,.18);
+  border-radius: 12px; padding: 16px 18px; gap: 12px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.lp-params-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.lp-params-title {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 800;
+  letter-spacing: .1em; color: rgba(220,235,250,.9);
+}
+.lp-params-sub {
+  margin-left: auto; font-family: var(--font-mono); font-size: 9px;
+  color: rgba(200,220,240,.28); letter-spacing: .04em;
+}
+
+/* Time pickers */
+.lp-time-row {
+  display: flex; gap: 0; align-items: center;
+  background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px; padding: 10px 16px;
+}
+.lp-time-group { display: flex; align-items: center; gap: 8px; flex: 1; }
+.lp-time-sep { width: 1px; height: 26px; background: rgba(255,255,255,.08); margin: 0 16px; flex-shrink: 0; }
+.lp-time-icon { font-size: 14px; flex-shrink: 0; }
+.lp-time-lbl {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: rgba(200,220,240,.45); letter-spacing: .06em; white-space: nowrap;
+}
+.lp-time-inp {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  background: rgba(14,20,34,.88); border: 1px solid rgba(255,255,255,.1);
+  color: var(--cyan); padding: 5px 8px; border-radius: 6px; outline: none;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.3);
+}
+.lp-time-inp:focus { border-color: rgba(0,212,255,.45); }
+.lp-time-arrow {
+  font-family: var(--font-mono); font-size: 13px; color: rgba(200,220,240,.25); flex-shrink: 0;
+}
+
+/* ON-PEAK / OFF-PEAK tabs */
+.lp-tab-bar { display: flex; gap: 6px; }
+.lp-tab-btn {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 800;
+  padding: 7px 20px; border-radius: 6px; cursor: pointer; letter-spacing: .08em;
+  border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
+  color: rgba(200,220,240,.3); transition: all .2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.lp-tab-on {
+  background: rgba(204,140,0,.16); color: #ffcc44;
+  border-color: rgba(204,140,0,.38); box-shadow: 0 0 12px rgba(204,140,0,.18);
+}
+.lp-tab-off {
+  background: rgba(88,48,180,.18); color: #aa88ff;
+  border-color: rgba(120,72,210,.35); box-shadow: 0 0 12px rgba(100,56,200,.18);
+}
+
+/* Parameter grid */
+.lp-param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lp-param-card {
+  background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px; padding: 11px 13px;
+  display: flex; flex-direction: column; gap: 5px;
+  transition: background .15s, border-color .15s;
+}
+.lp-param-card:hover { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.11); }
+.lp-param-lbl {
+  font-family: var(--font-mono); font-size: 7.5px; font-weight: 700;
+  color: rgba(200,215,230,.28); letter-spacing: .13em; text-transform: uppercase;
+}
+.lp-param-inp-row { display: flex; align-items: baseline; gap: 7px; }
+.lp-param-inp {
+  width: 72px; font-family: var(--font-mono); font-size: 20px; font-weight: 800;
+  background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,.1);
+  outline: none; padding: 2px 0; letter-spacing: .02em; transition: border-color .15s;
+}
+.lp-param-inp:focus { border-bottom-color: rgba(0,212,255,.5); }
+.lp-param-unit {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  color: rgba(200,215,230,.38); padding-bottom: 2px;
+}
+.lp-param-desc { font-family: var(--font-mono); font-size: 8.5px; color: rgba(200,215,230,.25); }
+.lp-inp-amber  { color: var(--amber); }
+.lp-inp-cyan   { color: var(--cyan);  }
+.lp-inp-green  { color: var(--green); }
+.lp-inp-purple { color: #a855f7; }
 
 /* ══ AIRFLOW-ORP MODE ══ */
 .arp-wrap { display: flex; flex-direction: column; gap: 12px; }
