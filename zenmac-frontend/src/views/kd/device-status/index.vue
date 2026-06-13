@@ -1,146 +1,209 @@
 <template>
-  <div class="dh-wrap">
+  <div class="dh-outer">
 
-    <!-- ── STATS BAR ───────────────────────────────────────────────── -->
-    <div class="dh-stats-bar">
-      <div class="dh-stat" :class="mqttConnected ? 'stat-ok' : 'stat-err'">
-        <div class="ds-val">{{ mqttConnected ? 'CONNECTED' : 'OFFLINE' }}</div>
-        <div class="ds-lbl">MQTT Broker</div>
+    <!-- ── SUMMARY BAR ─────────────────────────────────────────── -->
+    <div class="summary-bar">
+      <div class="sb-item">
+        <div class="sb-num" style="color:var(--dh-cyan)">{{ registry.length }}</div>
+        <div class="sb-lbl">TOTAL DEVICES</div>
       </div>
-      <div class="dh-stat">
-        <div class="ds-val">{{ activeTopics }}<span class="ds-of">/5</span></div>
-        <div class="ds-lbl">Topics Active</div>
+      <div class="sb-item">
+        <div class="sb-num" style="color:var(--dh-green)">{{ onlineCount }}</div>
+        <div class="sb-lbl">ONLINE</div>
       </div>
-      <div class="dh-stat">
-        <div class="ds-val">{{ totalFields }}</div>
-        <div class="ds-lbl">Data Points</div>
+      <div class="sb-item">
+        <div class="sb-num" style="color:var(--dh-red)">{{ offlineCount }}</div>
+        <div class="sb-lbl">OFFLINE</div>
       </div>
-      <div class="dh-stat" :class="lastUpdateTs ? 'stat-ok' : ''">
-        <div class="ds-val">{{ lastUpdateTs || '—' }}</div>
-        <div class="ds-lbl">Last Update</div>
+      <div class="sb-item">
+        <div class="sb-num" style="color:var(--dh-text3)">{{ unknownCount }}</div>
+        <div class="sb-lbl">UNKNOWN</div>
       </div>
-      <div class="dh-stat-spacer"></div>
-      <button class="dh-btn" @click="exportCSV">
-        <i class="bx bx-download"></i> Export CSV
-      </button>
-    </div>
-
-    <!-- ── TOPIC PANELS ────────────────────────────────────────────── -->
-    <div class="dh-topics">
-
-      <!-- kd — Flow Meters -->
-      <div class="dh-topic-card" :class="topicStatusClass('kd')">
-        <div class="dtc-header">
-          <span class="dtc-dot" :class="topicDotClass('kd')"></span>
-          <span class="dtc-name">FLOW METERS</span>
-          <span class="dtc-topic">zenzero/hmi/kd</span>
-          <span class="dtc-status">{{ topicStatus('kd') }}</span>
-          <span class="dtc-ts">{{ topicTs('kd') }}</span>
-        </div>
-        <div class="dtc-fields">
-          <div class="dtc-row" v-for="f in flowFields" :key="f.key">
-            <span class="dtc-field">{{ f.label }}</span>
-            <span class="dtc-val" :class="valClass(kd[f.key])">{{ fmt(kd[f.key], f.unit) }}</span>
-          </div>
-        </div>
+      <div class="sb-item sb-sep">
+        <div class="sb-num" style="color:var(--dh-red)">{{ activeErrors }}</div>
+        <div class="sb-lbl">ACTIVE ERRORS</div>
       </div>
-
-      <!-- kd4 — Sensors -->
-      <div class="dh-topic-card" :class="topicStatusClass('kd4')">
-        <div class="dtc-header">
-          <span class="dtc-dot" :class="topicDotClass('kd4')"></span>
-          <span class="dtc-name">SENSORS</span>
-          <span class="dtc-topic">zenzero/hmi/kd4</span>
-          <span class="dtc-status">{{ topicStatus('kd4') }}</span>
-          <span class="dtc-ts">{{ topicTs('kd4') }}</span>
-        </div>
-        <div class="dtc-fields">
-          <div class="dtc-row" v-for="f in sensorFields" :key="f.key">
-            <span class="dtc-field">{{ f.label }}</span>
-            <span class="dtc-val" :class="valClass(kd4[f.key])">{{ fmt(kd4[f.key], f.unit) }}</span>
-          </div>
-        </div>
+      <div class="sb-item" style="min-width:180px">
+        <div class="sb-sublbl">MOST FREQUENT</div>
+        <div class="sb-text" style="color:var(--dh-amber)">{{ mostFreqDevice }}</div>
       </div>
-
-      <!-- kd1 — Blowers -->
-      <div class="dh-topic-card wide" :class="topicStatusClass('kd1')">
-        <div class="dtc-header">
-          <span class="dtc-dot" :class="topicDotClass('kd1')"></span>
-          <span class="dtc-name">BLOWERS (TB-01 / TB-02)</span>
-          <span class="dtc-topic">zenzero/hmi/kd1</span>
-          <span class="dtc-status">{{ topicStatus('kd1') }}</span>
-          <span class="dtc-ts">{{ topicTs('kd1') }}</span>
-        </div>
-        <div class="dtc-fields dtc-two-col">
-          <div class="dtc-group">
-            <div class="dtc-group-title">TB-01</div>
-            <div class="dtc-row" v-for="f in blower1Fields" :key="f.key">
-              <span class="dtc-field">{{ f.label }}</span>
-              <span class="dtc-val" :class="valClass(kd1[f.key])">{{ fmt(kd1[f.key], f.unit) }}</span>
-            </div>
-          </div>
-          <div class="dtc-group">
-            <div class="dtc-group-title">TB-02</div>
-            <div class="dtc-row" v-for="f in blower2Fields" :key="f.key">
-              <span class="dtc-field">{{ f.label }}</span>
-              <span class="dtc-val" :class="valClass(kd1[f.key])">{{ fmt(kd1[f.key], f.unit) }}</span>
-            </div>
-          </div>
-        </div>
+      <div class="sb-item" style="min-width:130px">
+        <div class="sb-sublbl">ERRORS TODAY</div>
+        <div class="sb-num" style="color:var(--dh-orange);font-size:20px">{{ errorsToday }}</div>
       </div>
-
-      <!-- kd5 — Pumps & Daily Totals -->
-      <div class="dh-topic-card" :class="topicStatusClass('kd5')">
-        <div class="dtc-header">
-          <span class="dtc-dot" :class="topicDotClass('kd5')"></span>
-          <span class="dtc-name">PUMPS &amp; DAILY TOTALS</span>
-          <span class="dtc-topic">zenzero/hmi/kd5</span>
-          <span class="dtc-status">{{ topicStatus('kd5') }}</span>
-          <span class="dtc-ts">{{ topicTs('kd5') }}</span>
-        </div>
-        <div class="dtc-fields">
-          <div class="dtc-row" v-for="f in pumpFields" :key="f.key">
-            <span class="dtc-field">{{ f.label }}</span>
-            <span class="dtc-val" :class="valClass(kd5[f.key])">{{ fmt(kd5[f.key], f.unit) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- kd2 — Yesterday -->
-      <div class="dh-topic-card" :class="topicStatusClass('kd2')">
-        <div class="dtc-header">
-          <span class="dtc-dot" :class="topicDotClass('kd2')"></span>
-          <span class="dtc-name">YESTERDAY</span>
-          <span class="dtc-topic">zenzero/hmi/kd2</span>
-          <span class="dtc-status">{{ topicStatus('kd2') }}</span>
-          <span class="dtc-ts">{{ topicTs('kd2') }}</span>
-        </div>
-        <div class="dtc-fields">
-          <div class="dtc-row" v-for="f in yestFields" :key="f.key">
-            <span class="dtc-field">{{ f.label }}</span>
-            <span class="dtc-val" :class="valClass(kd2[f.key])">{{ fmt(kd2[f.key], f.unit) }}</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ── RAW DUMP toggle ─────────────────────────────────────────── -->
-    <div class="dh-raw-toggle" @click="showRaw = !showRaw">
-      <i class="bx" :class="showRaw ? 'bx-chevron-up' : 'bx-chevron-down'"></i>
-      RAW MQTT DATA ({{ showRaw ? 'hide' : 'show all fields' }})
-    </div>
-    <div class="dh-raw" v-if="showRaw">
-      <div class="dh-raw-block" v-for="(topic, tk) in rawTopics" :key="tk">
-        <div class="drb-title">{{ tk }}</div>
-        <div class="drb-row" v-for="(v, k) in topic" :key="k">
-          <span class="drb-key">{{ k }}</span>
-          <span class="drb-val">{{ v }}</span>
-        </div>
-        <div class="drb-empty" v-if="!Object.keys(topic).length">— no data —</div>
+      <div class="sb-spacer"></div>
+      <div class="sb-actions">
+        <span class="refresh-dot" v-show="refreshing"></span>
+        <button class="act-btn btn-cyan"  @click="exportCSV">↓ Export CSV</button>
+        <button class="act-btn btn-amber" @click="clearResolved">🗑 Clear Resolved</button>
+        <button class="act-btn btn-green" @click="simulateSampleErrors" title="สร้าง sample errors เพื่อทดสอบ">🧪 Demo Errors</button>
       </div>
     </div>
 
+    <!-- ── TWO-PANEL AREA ──────────────────────────────────────── -->
+    <div class="panels">
+
+      <!-- LEFT: DEVICE STATUS TABLE -->
+      <div class="panel-left">
+        <div class="panel-hdr">
+          <span style="color:var(--dh-cyan)">📡</span>
+          <span class="panel-title" style="color:var(--dh-cyan)">DEVICE STATUS</span>
+          <span class="panel-count">{{ filteredDevices.length }} devices</span>
+          <div class="ph-right">
+            <span class="ph-meta">Timeout: 60s | No-data: 120s</span>
+            <span class="mqtt-dot-sm" :class="mqttConnected ? 'mdot-ok':'mdot-err'"></span>
+            <span class="ph-meta" :style="{color: mqttConnected ? 'var(--dh-green)' : 'var(--dh-red)'}">
+              {{ mqttConnected ? 'MQTT OK' : 'MQTT OFF' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <button class="f-btn"       :class="{active:devFilter==='all'}"    @click="devFilter='all'">ทั้งหมด</button>
+          <button class="f-btn f-grn" :class="{active:devFilter==='online'}" @click="devFilter='online'">🟢 Online</button>
+          <button class="f-btn f-red" :class="{active:devFilter==='offline'}" @click="devFilter='offline'">🔴 Offline</button>
+          <button class="f-btn f-amb" :class="{active:devFilter==='error'}"  @click="devFilter='error'">⚠ มี Error</button>
+          <button class="f-btn"       :class="{active:devFilter==='sensor'}" @click="devFilter='sensor'">Sensor</button>
+          <button class="f-btn"       :class="{active:devFilter==='blower'}" @click="devFilter='blower'">Blower</button>
+          <button class="f-btn"       :class="{active:devFilter==='pump'}"   @click="devFilter='pump'">Pump</button>
+          <div class="f-spacer"></div>
+          <input class="f-search" v-model="devSearch" type="text" placeholder="🔍 ค้นหา...">
+        </div>
+
+        <div class="tbl-scroll">
+          <table class="dh-table">
+            <thead>
+              <tr>
+                <th>สถานะ</th>
+                <th>Device ID</th>
+                <th>ชื่อ</th>
+                <th>ประเภท</th>
+                <th>Topic</th>
+                <th>ค่าล่าสุด</th>
+                <th>Last Seen</th>
+                <th>Signal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!filteredDevices.length">
+                <td colspan="8">
+                  <div class="empty-state">
+                    <div class="es-icon">📭</div>
+                    <div>ไม่มี Device ที่ตรงกับ filter</div>
+                  </div>
+                </td>
+              </tr>
+              <tr v-for="d in filteredDevices" :key="d.id"
+                  :class="rowClass(d)">
+                <td>
+                  <span class="badge" :class="statusBadge(d.status)">
+                    <span class="bdot" :class="statusBadge(d.status)+'d'"></span>
+                    {{ d.status.toUpperCase() }}
+                  </span>
+                  <span v-if="errDevSet.has(d.id)" style="color:var(--dh-red);margin-left:4px;font-size:10px">⚠</span>
+                </td>
+                <td><span class="dev-id">{{ d.id }}</span></td>
+                <td class="dev-name-cell" :title="d.name">{{ typeIcon(d.type) }} {{ d.name }}</td>
+                <td><span class="dev-type">{{ d.type }}</span></td>
+                <td class="dev-topic-cell" :title="d.topic_sub">{{ d.topic_sub }}</td>
+                <td>
+                  <span class="dev-val" :class="d.lastVal!=='—'?'val-live':''">{{ d.lastVal }}</span>
+                  <span class="dev-unit" v-if="d.lastVal!=='—'"> {{ d.unit }}</span>
+                </td>
+                <td>
+                  <span class="last-seen" :class="lastSeenClass(d.lastSeen)">{{ lastSeenLabel(d.lastSeen) }}</span>
+                </td>
+                <td>
+                  <div class="sq-wrap">
+                    <div class="sq-bar">
+                      <div class="sq-fill" :style="{width:sigQ(d)+'%',background:sigColor(sigQ(d))}"></div>
+                    </div>
+                    <span class="sq-pct" :style="{color:sigColor(sigQ(d))}">{{ sigQ(d) }}%</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RIGHT: ERROR LOG -->
+      <div class="panel-right">
+        <div class="panel-hdr">
+          <span style="color:var(--dh-red)">🚨</span>
+          <span class="panel-title" style="color:var(--dh-red)">ERROR HISTORY LOG</span>
+          <span class="panel-count">{{ filteredErrors.length }} errors</span>
+          <div class="ph-right">
+            <span class="ph-meta">localStorage: zenmac_error_log</span>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <button class="f-btn"       :class="{active:errFilter==='all'}"      @click="errFilter='all'">ทั้งหมด</button>
+          <button class="f-btn f-red" :class="{active:errFilter==='active'}"   @click="errFilter='active'">🔴 Active</button>
+          <button class="f-btn f-grn" :class="{active:errFilter==='resolved'}" @click="errFilter='resolved'">✅ Resolved</button>
+          <div class="f-spacer"></div>
+          <select v-model="errTypeFilter" class="f-select">
+            <option value="">ทุก Error Type</option>
+            <option value="NO_DATA">NO_DATA</option>
+            <option value="OUT_OF_RANGE">OUT_OF_RANGE</option>
+            <option value="PARSE_ERROR">PARSE_ERROR</option>
+            <option value="MQTT_DISCONNECT">MQTT_DISCONNECT</option>
+            <option value="SENSOR_FAULT">SENSOR_FAULT</option>
+          </select>
+          <select v-model="errDevFilter" class="f-select" style="max-width:130px">
+            <option value="">ทุก Device</option>
+            <option v-for="id in errDeviceIds" :key="id" :value="id">{{ id }}</option>
+          </select>
+        </div>
+
+        <div class="tbl-scroll">
+          <table class="dh-table">
+            <thead>
+              <tr>
+                <th>เวลา</th>
+                <th>Device ID</th>
+                <th>Error Type</th>
+                <th>รายละเอียด</th>
+                <th>ค่า</th>
+                <th>สถานะ</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!filteredErrors.length">
+                <td colspan="7">
+                  <div class="empty-state">
+                    <div class="es-icon">✅</div>
+                    <div>ไม่มี Error ที่ตรงกับ filter</div>
+                  </div>
+                </td>
+              </tr>
+              <tr v-for="e in filteredErrors" :key="e.id"
+                  :class="{'row-resolved':e.resolved}">
+                <td class="ts-cell">{{ tsDisplay(e.ts) }}</td>
+                <td>
+                  <span class="dev-id">{{ e.device_id }}</span>
+                  <br><span class="dev-name-sm">{{ e.device_name }}</span>
+                </td>
+                <td><span class="badge" :class="errBadgeClass(e.error_type)">{{ errTypeIcon(e.error_type) }} {{ e.error_type }}</span></td>
+                <td class="detail-cell" :title="e.detail">{{ e.detail }}</td>
+                <td><span class="err-val">{{ e.value || '—' }}</span></td>
+                <td>
+                  <span class="badge" :class="e.resolved ? 'b-resolved':'b-active-err'">
+                    {{ e.resolved ? '✅ RESOLVED' : '🔴 ACTIVE' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="res-btn" @click="resolveError(e.id)" :disabled="e.resolved">✓ Resolve</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
   </div>
 </template>
 
@@ -148,304 +211,601 @@
 import { mapState } from 'vuex';
 import { on, getSocket } from '@/services/staKdSocket';
 
-const OFFLINE_THRESHOLD = 90 * 1000;
+// ── Device Registry (28 devices mirroring STA-KD topology) ─────────
+const DEFAULT_DEVICES = [
+  { id:'KD_AT1_FM01',        name:'Process Flow',           type:'flow',   topic_sub:'zenzero/hmi/kd',  unit:'m³/hr',  path:'Process Flow m3_hr (Real)',              min:0,    max:500  },
+  { id:'KD_AT1_ORP-01',      name:'Process ORP',            type:'sensor', topic_sub:'zenzero/hmi/kd4', unit:'mV',     path:'Process_ORP_Lock_hr',                    min:-200, max:800  },
+  { id:'KD_AT1_pH-01',       name:'Process pH',             type:'sensor', topic_sub:'zenzero/hmi/kd4', unit:'pH',     path:'Process_pH_Lock_hr',                     min:3,    max:11   },
+  { id:'KD_AT1_Temp-01',     name:'Process Temp',           type:'sensor', topic_sub:'zenzero/hmi/kd4', unit:'°C',     path:'Process_Temp_Lock_hr',                   min:0,    max:80   },
+  { id:'KD_AT2_FM01',        name:'Serum Flow',             type:'flow',   topic_sub:'zenzero/hmi/kd',  unit:'m³/hr',  path:'Serum Flow m3_hr (real)',                 min:0,    max:500  },
+  { id:'KD_AT2_ORP-01',      name:'Serum ORP',              type:'sensor', topic_sub:'zenzero/hmi/kd4', unit:'mV',     path:'Serum_ORP_Lock_hr',                      min:-200, max:800  },
+  { id:'KD_AT2_pH-01',       name:'Serum pH',               type:'sensor', topic_sub:'zenzero/hmi/kd4', unit:'pH',     path:'Serum_PH_Lock_hr',                       min:3,    max:11   },
+  { id:'KD_AT2_Temp-01',     name:'Serum Temp',             type:'sensor', topic_sub:'zenzero/hmi/kd4', unit:'°C',     path:'Serum_Temp_Lock_hr',                     min:0,    max:80   },
+  { id:'KD_TB01_Kw',         name:'TB-01 Power',            type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'kW',     path:'TB_1_BLOWER POWER_kW',                   min:0,    max:300  },
+  { id:'KD_TB01_Cr',         name:'TB-01 Current',          type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'A',      path:'TB_1_MOTOR CURRENT_A',                   min:0,    max:100  },
+  { id:'KD_TB01_STFR',       name:'TB-01 Suction Flow',     type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'m³/min', path:'TB_1_SUCTION FLOW RATE_CMM',             min:0,    max:10   },
+  { id:'KD_TB01_MTmp',       name:'TB-01 Motor Temp',       type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'°C',     path:'TB_1_MOTOR TEMPERATURE_C',               min:0,    max:80   },
+  { id:'KD_TB01_DTmp',       name:'TB-01 Drive Temp',       type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'°C',     path:'TB_1_DRIVE TEMPERATURE_C',               min:0,    max:80   },
+  { id:'KD_TB01_ONOFF',      name:'TB-01 Start Count',      type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'count',  path:'TB_1_Number of ON OFF',                  min:0,    max:100  },
+  { id:'KD_TB02_Kw',         name:'TB-02 Power',            type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'kW',     path:'TB_2_BLOWER POWER_kW',                   min:0,    max:300  },
+  { id:'KD_TB02_Cr',         name:'TB-02 Current',          type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'A',      path:'TB_2_MOTOR CURRENT_A',                   min:0,    max:100  },
+  { id:'KD_TB02_STFR',       name:'TB-02 Suction Flow',     type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'m³/min', path:'TB_2_SUCTION FLOW RATE_CMM',             min:0,    max:10   },
+  { id:'KD_TB02_MTmp',       name:'TB-02 Motor Temp',       type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'°C',     path:'TB_2_MOTOR TEMPERATURE_C',               min:0,    max:80   },
+  { id:'KD_TB02_DTmp',       name:'TB-02 Drive Temp',       type:'blower', topic_sub:'zenzero/hmi/kd1', unit:'°C',     path:'TB_2_DRIVE TEMPERATURE_C',               min:0,    max:80   },
+  { id:'KD_TB01_Status',     name:'TB-01 Status',           type:'blower', topic_sub:'zenzero/hmi/kd5', unit:'on/off', path:'TB-01_Status',                           min:0,    max:1    },
+  { id:'KD_TB02_Status',     name:'TB-02 Status',           type:'blower', topic_sub:'zenzero/hmi/kd5', unit:'on/off', path:'TB-02_Status',                           min:0,    max:1    },
+  { id:'KD_ProcPump_Status', name:'Process Pump',           type:'pump',   topic_sub:'zenzero/hmi/kd5', unit:'on/off', path:'Process pump_Status',                    min:0,    max:1    },
+  { id:'KD_SerumPump_Status',name:'Serum Pump',             type:'pump',   topic_sub:'zenzero/hmi/kd5', unit:'on/off', path:'Serum pump_Status',                      min:0,    max:1    },
+  { id:'KD_ProcFlow_Day',    name:'Process Flow/Day',       type:'flow',   topic_sub:'zenzero/hmi/kd5', unit:'m³/day', path:'Process Flow M3_Day_real',               min:0,    max:5000 },
+  { id:'KD_SerumFlow_Day',   name:'Serum Flow/Day',         type:'flow',   topic_sub:'zenzero/hmi/kd5', unit:'m³/day', path:'Serum Flow M3_Day_real',                 min:0,    max:5000 },
+  { id:'KD_TotalFlow_Day',   name:'Total Flow/Day',         type:'flow',   topic_sub:'zenzero/hmi/kd5', unit:'m³/day', path:'Process+Serum Flow M3_Day_real',         min:0,    max:10000},
+  { id:'KD_ProcFlow_Yest',   name:'Process Flow Yesterday', type:'flow',   topic_sub:'zenzero/hmi/kd2', unit:'m³/day', path:'Process Flow M3_Day_Lock_yesterday',     min:0,    max:5000 },
+  { id:'KD_SerumFlow_Yest',  name:'Serum Flow Yesterday',   type:'flow',   topic_sub:'zenzero/hmi/kd2', unit:'m³/day', path:'Serum Flow M3_Day_Lock_yesterday',       min:0,    max:5000 },
+];
+
+const LS_KEY     = 'zenmac_error_log';
+const MAX_LOG    = 2000;
+const OFFLINE_MS = 60  * 1000;
+const NODATA_MS  = 120 * 1000;
+const NODATA_REPEAT = 300 * 1000;
 
 export default {
   name: 'DeviceStatusPage',
 
+  computed: {
+    ...mapState('staKd', ['mqttConnected']),
+
+    onlineCount()  { return this.registry.filter(d => d.status === 'online').length;  },
+    offlineCount() { return this.registry.filter(d => d.status === 'offline').length; },
+    unknownCount() { return this.registry.filter(d => d.status === 'unknown').length; },
+
+    activeErrors() { return this.errorLog.filter(e => !e.resolved).length; },
+
+    errorsToday() {
+      const today = new Date().toDateString();
+      return this.errorLog.filter(e => new Date(e.ts).toDateString() === today).length;
+    },
+
+    mostFreqDevice() {
+      const cnt = {};
+      this.errorLog.filter(e => !e.resolved).forEach(e => { cnt[e.device_id] = (cnt[e.device_id]||0)+1; });
+      const top = Object.entries(cnt).sort((a,b) => b[1]-a[1])[0];
+      return top ? `${top[0]} (${top[1]}x)` : '—';
+    },
+
+    errDevSet() {
+      return new Set(this.errorLog.filter(e => !e.resolved).map(e => e.device_id));
+    },
+
+    errDeviceIds() {
+      return [...new Set(this.errorLog.map(e => e.device_id))].sort();
+    },
+
+    filteredDevices() {
+      void this._tick;
+      const errDevs = this.errDevSet;
+      const q = this.devSearch.toLowerCase();
+      let list = this.registry.filter(d => {
+        if (this.devFilter === 'online'  && d.status !== 'online')  return false;
+        if (this.devFilter === 'offline' && d.status !== 'offline') return false;
+        if (this.devFilter === 'error'   && !errDevs.has(d.id))     return false;
+        if (this.devFilter === 'sensor'  && d.type !== 'sensor')    return false;
+        if (this.devFilter === 'blower'  && d.type !== 'blower')    return false;
+        if (this.devFilter === 'pump'    && d.type !== 'pump')      return false;
+        if (q && !d.id.toLowerCase().includes(q) && !d.name.toLowerCase().includes(q) && !(d.topic_sub||'').includes(q)) return false;
+        return true;
+      });
+      list.sort((a,b) => {
+        const ord = { offline:0, unknown:1, online:2 };
+        return (ord[a.status]??1) - (ord[b.status]??1);
+      });
+      return list;
+    },
+
+    filteredErrors() {
+      return this.errorLog.filter(e => {
+        if (this.errFilter === 'active'   && e.resolved)  return false;
+        if (this.errFilter === 'resolved' && !e.resolved) return false;
+        if (this.errTypeFilter && e.error_type !== this.errTypeFilter) return false;
+        if (this.errDevFilter  && e.device_id  !== this.errDevFilter)  return false;
+        return true;
+      }).slice(0, 200);
+    },
+  },
+
   data() {
     return {
-      topicLastSeen: { kd: null, kd1: null, kd2: null, kd4: null, kd5: null },
-      _ticker: null,
-      _unsubFns: [],
-      showRaw: false,
-      _tick: 0,
-
-      flowFields: [
-        { key: 'Process Flow m3_hr (Real)',  label: 'Process Flow',  unit: 'm³/hr' },
-        { key: 'Serum Flow m3_hr (real)',    label: 'Serum Flow',    unit: 'm³/hr' },
-      ],
-
-      sensorFields: [
-        { key: 'Process_ORP_Lock_hr',  label: 'Process ORP',  unit: 'mV'  },
-        { key: 'Serum_ORP_Lock_hr',    label: 'Serum ORP',    unit: 'mV'  },
-        { key: 'Process_pH_Lock_hr',   label: 'Process pH',   unit: 'pH'  },
-        { key: 'Serum_PH_Lock_hr',     label: 'Serum pH',     unit: 'pH'  },
-        { key: 'Process_Temp_Lock_hr', label: 'Process Temp', unit: '°C'  },
-        { key: 'Serum_Temp_Lock_hr',   label: 'Serum Temp',   unit: '°C'  },
-      ],
-
-      blower1Fields: [
-        { key: 'TB_1_BLOWER POWER_kW',          label: 'Power',          unit: 'kW'    },
-        { key: 'TB_1_MOTOR CURRENT_A',           label: 'Current',        unit: 'A'     },
-        { key: 'TB_1_SUCTION FLOW RATE_CMM',     label: 'Suction Flow',   unit: 'CMM'   },
-        { key: 'TB_1_Suction_pressure_mmAq',     label: 'Suction Press',  unit: 'mmAq'  },
-        { key: 'TB_1_DISCHARGE PRESSURE_mmAq',   label: 'Discharge Press',unit: 'mmAq'  },
-        { key: 'TB_1_MOTOR TEMPERATURE_C',       label: 'Motor Temp',     unit: '°C'    },
-        { key: 'TB_1_DRIVE TEMPERATURE_C',       label: 'Drive Temp',     unit: '°C'    },
-        { key: 'TB_1_DISCHARGE TEMPERATURE_C',   label: 'Discharge Temp', unit: '°C'    },
-        { key: 'TB_1_OUTSIDE TEMPERATURE_C',     label: 'Outside Temp',   unit: '°C'    },
-        { key: 'TB_1_Number of ON OFF',          label: 'ON/OFF Count',   unit: ''      },
-      ],
-
-      blower2Fields: [
-        { key: 'TB_2_BLOWER POWER_kW',          label: 'Power',          unit: 'kW'    },
-        { key: 'TB_2_MOTOR CURRENT_A',           label: 'Current',        unit: 'A'     },
-        { key: 'TB_2_SUCTION FLOW RATE_CMM',     label: 'Suction Flow',   unit: 'CMM'   },
-        { key: 'TB_2_Suction_pressure_mmAq',     label: 'Suction Press',  unit: 'mmAq'  },
-        { key: 'TB_2_DISCHARGE PRESSURE_mmAq',   label: 'Discharge Press',unit: 'mmAq'  },
-        { key: 'TB_2_MOTOR TEMPERATURE_C',       label: 'Motor Temp',     unit: '°C'    },
-        { key: 'TB_2_DRIVE TEMPERATURE_C',       label: 'Drive Temp',     unit: '°C'    },
-        { key: 'TB_2_DISCHARGE TEMPERATURE_C',   label: 'Discharge Temp', unit: '°C'    },
-        { key: 'TB_2_OUTSIDE TEMPERATURE_C',     label: 'Outside Temp',   unit: '°C'    },
-        { key: 'TB_2_Number of ON OFF',          label: 'ON/OFF Count',   unit: ''      },
-      ],
-
-      pumpFields: [
-        { key: 'TB-01_Status',                    label: 'TB-01 Status',        unit: '' },
-        { key: 'TB-02_Status',                    label: 'TB-02 Status',        unit: '' },
-        { key: 'Process pump_Status',             label: 'Process Pump Status', unit: '' },
-        { key: 'Serum pump_Status',               label: 'Serum Pump Status',   unit: '' },
-        { key: 'Process Flow M3_Day_real',        label: 'Process Flow/Day',    unit: 'm³'  },
-        { key: 'Serum Flow M3_Day_real',          label: 'Serum Flow/Day',      unit: 'm³'  },
-        { key: 'Process+Serum Flow M3_Day_real',  label: 'Total Flow/Day',      unit: 'm³'  },
-      ],
-
-      yestFields: [
-        { key: 'Process Flow M3_Day_Lock_yesterday', label: 'Process Flow Yesterday', unit: 'm³' },
-        { key: 'Serum Flow M3_Day_Lock_yesterday',   label: 'Serum Flow Yesterday',   unit: 'm³' },
-      ],
+      registry:      [],
+      errorLog:      [],
+      devFilter:     'all',
+      errFilter:     'all',
+      errTypeFilter: '',
+      errDevFilter:  '',
+      devSearch:     '',
+      refreshing:    false,
+      _noDataTs:     {},
+      _rangeTs:      {},
+      _rdTimer:      null,
+      _checkTimer:   null,
+      _tickTimer:    null,
+      _unsubFns:     [],
+      _tick:         0,
     };
   },
 
-  computed: {
-    ...mapState('staKd', ['kd', 'kd1', 'kd2', 'kd4', 'kd5', 'mqttConnected', 'lastUpdate']),
-
-    activeTopics() {
-      void this._tick;
-      return Object.values(this.topicLastSeen).filter(ts => ts && Date.now() - ts < OFFLINE_THRESHOLD).length;
-    },
-
-    totalFields() {
-      return this.flowFields.length + this.sensorFields.length +
-             this.blower1Fields.length + this.blower2Fields.length +
-             this.pumpFields.length + this.yestFields.length;
-    },
-
-    lastUpdateTs() {
-      if (!this.lastUpdate) return null;
-      return new Date(this.lastUpdate).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    },
-
-    rawTopics() {
-      return { kd: this.kd, kd1: this.kd1, kd2: this.kd2, kd4: this.kd4, kd5: this.kd5 };
-    },
-  },
-
   mounted() {
+    // init registry with runtime state
+    this.registry = DEFAULT_DEVICES.map(d => ({
+      ...d, status:'unknown', lastSeen:null, lastVal:'—', msgCount:0, errCount:0,
+    }));
+
+    this._loadLog();
     getSocket();
-    const u1 = on('kd:update', ({ key }) => {
-      if (key in this.topicLastSeen) {
-        this.$set(this.topicLastSeen, key, Date.now());
-      }
-    });
-    const u2 = on('kd:snapshot', (snap) => {
-      const keys = Object.keys(snap || {});
-      keys.forEach(k => {
-        if (k in this.topicLastSeen && snap[k] && Object.keys(snap[k]).length) {
-          this.$set(this.topicLastSeen, k, Date.now());
-        }
-      });
-    });
-    this._unsubFns = [u1, u2];
-    this._ticker = setInterval(() => { this._tick++; }, 5000);
+
+    const u1 = on('kd:update',    this._onUpdate);
+    const u2 = on('kd:status',    this._onMqttStatus);
+    const u3 = on('ws:disconnect', this._onDisconnect);
+    const u4 = on('rawmqtt',      this._onRaw);
+    const u5 = on('kd:snapshot',  this._onSnapshot);
+    this._unsubFns = [u1, u2, u3, u4, u5];
+
+    this._checkTimer = setInterval(this._checkOffline, 10000);
+    this._tickTimer  = setInterval(() => { this._tick++; }, 5000);
   },
 
   beforeDestroy() {
     this._unsubFns.forEach(fn => fn());
-    clearInterval(this._ticker);
+    clearInterval(this._checkTimer);
+    clearInterval(this._tickTimer);
+    clearTimeout(this._rdTimer);
   },
 
   methods: {
-    topicStatus(key) {
-      void this._tick;
-      const ts = this.topicLastSeen[key];
-      if (!ts) return 'WAITING';
-      return Date.now() - ts < OFFLINE_THRESHOLD ? 'LIVE' : 'STALE';
+    // ── socket handlers ─────────────────────────────────────────
+    _onUpdate({ key, data }) {
+      if (!key || !data) return;
+      this._flashRefresh();
+      const now = Date.now();
+      this.registry.forEach(d => {
+        if (d.topic_sub.split('/').pop() !== key) return;
+        this.$set(d, 'lastSeen', now);
+        this.$set(d, 'status', 'online');
+        this.$set(d, 'msgCount', (d.msgCount || 0) + 1);
+
+        const raw = data[d.path];
+        if (raw !== undefined && raw !== null) {
+          const num = parseFloat(raw);
+          const disp = !isNaN(num) ? (Number.isInteger(num) ? String(num) : num.toFixed(2)) : String(raw);
+          this.$set(d, 'lastVal', disp);
+          this._validateRange(d, num);
+        }
+
+        if (data.fault === true || data.fault === 1 || data.error === true) {
+          this._debounce('fault_' + d.id, 60000, () => {
+            this._logError(d.id, 'SENSOR_FAULT', 'Sensor fault flag ถูกตั้งค่า — ตรวจสอบหัว sensor', data.fault_code || '');
+          });
+        }
+      });
     },
 
-    topicStatusClass(key) {
-      const s = this.topicStatus(key);
-      return { 'tc-live': s === 'LIVE', 'tc-stale': s === 'STALE', 'tc-wait': s === 'WAITING' };
+    _onSnapshot(snap) {
+      if (!snap) return;
+      Object.entries(snap).forEach(([key, data]) => {
+        if (!data || typeof data !== 'object') return;
+        this._onUpdate({ key, data });
+      });
     },
 
-    topicDotClass(key) {
-      const s = this.topicStatus(key);
-      return { 'dot-live': s === 'LIVE', 'dot-stale': s === 'STALE', 'dot-wait': s === 'WAITING' };
-    },
-
-    topicTs(key) {
-      const ts = this.topicLastSeen[key];
-      if (!ts) return '—';
-      return new Date(ts).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    },
-
-    fmt(val, unit) {
-      if (val == null || val === '') return '—';
-      const n = Number(val);
-      if (!Number.isNaN(n)) {
-        const s = Number.isInteger(n) ? String(n) : n.toFixed(2);
-        return unit ? `${s} ${unit}` : s;
+    _onMqttStatus({ connected }) {
+      if (!connected) {
+        this._debounce('mqttdisc', 120000, () => {
+          this._logError('SYSTEM', 'MQTT_DISCONNECT', 'MQTT Broker offline/unreachable — ตรวจสอบ network', '');
+        });
       }
-      return String(val) + (unit ? ` ${unit}` : '');
     },
 
-    valClass(val) {
-      if (val == null || val === '') return 'v-null';
-      const n = Number(val);
-      if (!Number.isNaN(n) && n === 0) return 'v-zero';
-      return 'v-ok';
+    _onDisconnect() {
+      this._debounce('wsdisc', 120000, () => {
+        this._logError('SYSTEM', 'MQTT_DISCONNECT', 'WebSocket disconnect — backend ถูกตัดการเชื่อมต่อ', '');
+      });
     },
 
+    _onRaw(payload) {
+      if (!payload || !payload._parseError) return;
+      const topic = payload.topic || '?';
+      this._debounce('parse_' + topic, 60000, () => {
+        this._logError(topic, 'PARSE_ERROR', `JSON parse fail: ${payload._parseError}`, '');
+      });
+    },
+
+    // ── offline / no-data check ──────────────────────────────────
+    _checkOffline() {
+      const now = Date.now();
+      let changed = false;
+      this.registry.forEach(d => {
+        if (!d.lastSeen) return;
+
+        if (now - d.lastSeen > OFFLINE_MS && d.status === 'online') {
+          this.$set(d, 'status', 'offline');
+          changed = true;
+        }
+
+        if (now - d.lastSeen > NODATA_MS) {
+          this._debounce('nodata_' + d.id, NODATA_REPEAT, () => {
+            this._logError(d.id, 'NO_DATA',
+              `ไม่ได้รับข้อมูลนานกว่า ${Math.round((now-d.lastSeen)/60000)} นาที — ตรวจสอบ connection หรือ sensor`, '');
+          });
+        }
+      });
+      if (changed) this._tick++;
+    },
+
+    _validateRange(d, num) {
+      if (isNaN(num)) return;
+      if (d.min !== undefined && d.max !== undefined && (num < d.min || num > d.max)) {
+        this._debounce('range_' + d.id, 60000, () => {
+          const sig = d.path.split('_')[0] || d.type;
+          this._logError(d.id, 'OUT_OF_RANGE',
+            `${sig} = ${num} ${d.unit} นอกช่วง [${d.min}, ${d.max}]`, num);
+        });
+      }
+    },
+
+    // ── error log ────────────────────────────────────────────────
+    _logError(device_id, error_type, detail, value = '') {
+      const d = this.registry.find(x => x.id === device_id);
+      const entry = {
+        id:          Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        ts:          new Date().toISOString(),
+        device_id,
+        device_name: d ? d.name : device_id,
+        error_type,
+        detail,
+        value:       String(value),
+        resolved:    false,
+      };
+      this.errorLog.unshift(entry);
+      if (this.errorLog.length > MAX_LOG) this.errorLog = this.errorLog.slice(0, MAX_LOG);
+      if (d) this.$set(d, 'errCount', (d.errCount || 0) + 1);
+      this._saveLog();
+    },
+
+    _debounce(key, ms, fn) {
+      const ts = this._noDataTs[key] || 0;
+      if (Date.now() - ts > ms) {
+        this._noDataTs[key] = Date.now();
+        fn();
+      }
+    },
+
+    _loadLog() {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (raw) this.errorLog = JSON.parse(raw);
+      } catch { this.errorLog = []; }
+    },
+
+    _saveLog() {
+      try { localStorage.setItem(LS_KEY, JSON.stringify(this.errorLog)); } catch {}
+    },
+
+    // ── error actions ────────────────────────────────────────────
+    resolveError(id) {
+      const e = this.errorLog.find(x => x.id === id);
+      if (e) {
+        this.$set(e, 'resolved', true);
+        this.$set(e, 'resolved_at', new Date().toISOString());
+        this._saveLog();
+      }
+    },
+
+    clearResolved() {
+      if (!confirm('ลบ Error ที่ Resolved ทั้งหมด?')) return;
+      this.errorLog = this.errorLog.filter(e => !e.resolved);
+      this._saveLog();
+    },
+
+    // ── demo errors ──────────────────────────────────────────────
+    simulateSampleErrors() {
+      const samples = [
+        { id:'KD_AT2_ORP-01',      type:'OUT_OF_RANGE',    detail:'Serum ORP = 850 mV — นอกช่วง [-200, 800]',          val:'850' },
+        { id:'KD_AT1_pH-01',       type:'OUT_OF_RANGE',    detail:'Process pH = 2.1 — นอกช่วง [3, 11]',               val:'2.1' },
+        { id:'KD_AT1_FM01',        type:'NO_DATA',         detail:'ไม่ได้รับข้อมูลนานกว่า 5 นาที — ตรวจสอบ connection', val:''  },
+        { id:'KD_TB01_Kw',         type:'OUT_OF_RANGE',    detail:'TB-01 Power = 320 kW — นอกช่วง [0, 300]',           val:'320' },
+        { id:'KD_AT2_pH-01',       type:'PARSE_ERROR',     detail:'JSON parse fail: "ERR:TIMEOUT" — ข้อมูล corrupt',   val:'ERR:TIMEOUT' },
+        { id:'KD_TB02_Status',     type:'SENSOR_FAULT',    detail:'Sensor fault flag ถูกตั้งค่า — ตรวจสอบหัว sensor',  val:'1'  },
+        { id:'KD_SerumPump_Status',type:'MQTT_DISCONNECT', detail:'Broker offline/unreachable — connection lost',       val:''   },
+      ];
+      const count = Math.floor(Math.random() * 3) + 3;
+      const chosen = [...samples].sort(() => Math.random() - .5).slice(0, count);
+      chosen.forEach(s => this._logError(s.id, s.type, s.detail, s.val));
+
+      // simulate some devices going online
+      ['KD_AT2_ORP-01','KD_TB01_Kw','KD_AT1_pH-01'].forEach(id => {
+        const d = this.registry.find(x => x.id === id);
+        if (d) {
+          this.$set(d, 'status', 'online');
+          this.$set(d, 'lastSeen', Date.now() - Math.random() * 30000);
+          this.$set(d, 'msgCount', (d.msgCount||0) + 5);
+        }
+      });
+      this._tick++;
+    },
+
+    // ── export ───────────────────────────────────────────────────
     exportCSV() {
-      const rows = [['Topic', 'Field', 'Value', 'Unit']];
-      const add = (topic, fields, state) =>
-        fields.forEach(f => rows.push([topic, f.label, state[f.key] ?? '', f.unit]));
-
-      add('kd',  this.flowFields,    this.kd);
-      add('kd4', this.sensorFields,  this.kd4);
-      add('kd1', this.blower1Fields, this.kd1);
-      add('kd1', this.blower2Fields, this.kd1);
-      add('kd5', this.pumpFields,    this.kd5);
-      add('kd2', this.yestFields,    this.kd2);
-
+      const rows = [['Timestamp','Device ID','Device Name','Error Type','Detail','Value','Resolved','Resolved At']];
+      this.errorLog.forEach(e => rows.push([
+        e.ts, e.device_id, e.device_name, e.error_type,
+        '"' + (e.detail||'').replace(/"/g,'""') + '"',
+        e.value, e.resolved ? 'YES' : 'NO', e.resolved_at || '',
+      ]));
       const csv  = '﻿' + rows.map(r => r.join(',')).join('\r\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href = url;
-      a.download = `device-health-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `zenmac_error_log_${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
+    },
+
+    // ── ui helpers ───────────────────────────────────────────────
+    _flashRefresh() {
+      this.refreshing = true;
+      clearTimeout(this._rdTimer);
+      this._rdTimer = setTimeout(() => { this.refreshing = false; }, 500);
+    },
+
+    statusBadge(s) {
+      return { online:'b-online', offline:'b-offline', unknown:'b-unknown' }[s] || 'b-unknown';
+    },
+
+    rowClass(d) {
+      const hasErr = this.errDevSet.has(d.id);
+      return { 'row-err': hasErr && d.status === 'offline', 'row-warn': hasErr && d.status !== 'offline' };
+    },
+
+    typeIcon(t) {
+      return { sensor:'💡', flow:'💧', blower:'💨', pump:'⚙️' }[t] || '📦';
+    },
+
+    sigQ(d) { return Math.min(100, (d.msgCount || 0) * 8); },
+    sigColor(q) {
+      if (q >= 75) return 'var(--dh-green)';
+      if (q >= 40) return 'var(--dh-amber)';
+      return 'var(--dh-red)';
+    },
+
+    lastSeenLabel(ts) {
+      if (!ts) return '—';
+      const s = Math.round((Date.now() - ts) / 1000);
+      if (s < 15)  return '< 15s';
+      if (s < 60)  return `${s}s ago`;
+      return `${Math.round(s/60)}m ago`;
+    },
+
+    lastSeenClass(ts) {
+      if (!ts) return '';
+      const s = Math.round((Date.now() - ts) / 1000);
+      if (s < 60)  return 'ls-recent';
+      if (s < 300) return 'ls-stale';
+      return 'ls-dead';
+    },
+
+    errBadgeClass(t) {
+      return {
+        NO_DATA:         'b-err-nodata',
+        OUT_OF_RANGE:    'b-err-range',
+        PARSE_ERROR:     'b-err-parse',
+        MQTT_DISCONNECT: 'b-err-mqtt',
+        SENSOR_FAULT:    'b-err-fault',
+      }[t] || 'b-err-nodata';
+    },
+
+    errTypeIcon(t) {
+      return { NO_DATA:'⏱', OUT_OF_RANGE:'📊', PARSE_ERROR:'⚡', MQTT_DISCONNECT:'📡', SENSOR_FAULT:'🔥' }[t] || '⚠';
+    },
+
+    tsDisplay(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('th-TH', { day:'2-digit', month:'2-digit' }) + ' ' +
+             d.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
     },
   },
 };
 </script>
 
 <style scoped>
-.dh-wrap {
-  display: flex; flex-direction: column; gap: 12px;
-  padding: 14px; height: 100%; overflow-y: auto;
-  background: var(--ex-bg, #f2f4f7);
-  font-family: 'Prompt', 'Sarabun', sans-serif; font-size: 13px;
-  color: var(--ex-text, #1a1a2e);
+/* ── dark theme vars ─────────────────────────────────────────── */
+.dh-outer {
+  --dh-bg0:   #07090c;
+  --dh-bg1:   #0d1117;
+  --dh-bg2:   #141b24;
+  --dh-bg3:   #1c2535;
+  --dh-bdr:   #1e2a3a;
+  --dh-bdr2:  #28384e;
+  --dh-bdr3:  #3a4e62;
+  --dh-cyan:  #00d4ff;
+  --dh-green: #00e87a;
+  --dh-amber: #ffb800;
+  --dh-red:   #ff4040;
+  --dh-orange:#ff7820;
+  --dh-purple:#a855f7;
+  --dh-text:  #d8e4f0;
+  --dh-text2: #8aa2b8;
+  --dh-text3: #3a4e62;
+  --dh-mono:  'JetBrains Mono', 'Courier New', monospace;
+
+  display: flex; flex-direction: column;
+  height: 100%; overflow: hidden;
+  background: var(--dh-bg0); color: var(--dh-text);
+  font-family: var(--dh-mono);
 }
 
-/* stats bar */
-.dh-stats-bar {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  background: var(--ex-card-bg, #fff);
-  border: 1px solid var(--ex-card-bdr, #dde3ec);
-  border-radius: 10px; padding: 10px 16px;
+/* ── summary bar ─────────────────────────────────────────────── */
+.summary-bar {
+  display: flex; align-items: stretch; flex-shrink: 0;
+  background: rgba(8,12,18,.95); border-bottom: 2px solid var(--dh-bdr2);
 }
-.dh-stat { text-align: center; min-width: 90px; }
-.ds-val { font-size: 18px; font-weight: 800; line-height: 1; }
-.ds-of  { font-size: 11px; font-weight: 400; opacity: .5; }
-.ds-lbl { font-size: 9px; opacity: .55; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
-.stat-ok .ds-val { color: #27ae60; }
-.stat-err .ds-val { color: #e74c3c; }
-.dh-stat-spacer { flex: 1; }
+.sb-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 10px 18px; border-right: 1px solid var(--dh-bdr2); gap: 2px; min-width: 90px;
+}
+.sb-sep { border-right: 2px solid var(--dh-bdr2); }
+.sb-num { font-family: var(--dh-mono); font-weight: 700; font-size: 22px; line-height: 1; }
+.sb-lbl { font-family: var(--dh-mono); font-size: 8.5px; color: var(--dh-text3); letter-spacing: .07em; }
+.sb-sublbl { font-size: 8.5px; color: var(--dh-text3); letter-spacing: .06em; margin-bottom: 2px; }
+.sb-text { font-size: 10px; font-weight: 700; }
+.sb-spacer { flex: 1; }
+.sb-actions { display: flex; align-items: center; gap: 8px; padding: 0 14px; }
 
-/* btn */
-.dh-btn {
-  display: flex; align-items: center; gap: 6px; padding: 6px 12px;
-  border-radius: 7px; border: 1px solid var(--ex-card-bdr, #dde3ec);
-  background: var(--ex-card-bg, #fff); color: var(--ex-text, #1a1a2e);
-  font-size: 11px; cursor: pointer; transition: background .15s; white-space: nowrap;
+/* ── action buttons ──────────────────────────────────────────── */
+.act-btn {
+  font-family: var(--dh-mono); font-size: 10px; font-weight: 700;
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; border: 1px solid;
+  transition: background .15s; white-space: nowrap;
 }
-.dh-btn:hover { background: var(--ex-hover, #eef1f5); }
+.btn-cyan  { background: rgba(0,212,255,.10); color:var(--dh-cyan);  border-color:rgba(0,212,255,.28); }
+.btn-cyan:hover  { background: rgba(0,212,255,.20); }
+.btn-amber { background: rgba(255,184,0,.10);  color:var(--dh-amber); border-color:rgba(255,184,0,.28); }
+.btn-amber:hover { background: rgba(255,184,0,.20); }
+.btn-green { background: rgba(0,232,122,.10);  color:var(--dh-green); border-color:rgba(0,232,122,.28); }
+.btn-green:hover { background: rgba(0,232,122,.20); }
 
-/* topic grid */
-.dh-topics {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px;
+.refresh-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--dh-cyan); animation: dhpulse 1s infinite; display: inline-block;
 }
-.dh-topic-card.wide { grid-column: span 2; }
+@keyframes dhpulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-/* topic card */
-.dh-topic-card {
-  background: var(--ex-card-bg, #fff);
-  border: 2px solid var(--ex-card-bdr, #dde3ec);
-  border-radius: 10px; overflow: hidden;
-  transition: border-color .3s;
-}
-.dh-topic-card.tc-live  { border-color: #27ae60; }
-.dh-topic-card.tc-stale { border-color: #e67e22; }
-.dh-topic-card.tc-wait  { border-color: var(--ex-card-bdr, #dde3ec); }
+/* ── panels ──────────────────────────────────────────────────── */
+.panels { display: flex; flex: 1; overflow: hidden; }
+.panel-left  { width: 55%; display: flex; flex-direction: column; border-right: 2px solid var(--dh-bdr2); overflow: hidden; }
+.panel-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-.dtc-header {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 8px 12px; border-bottom: 1px solid var(--ex-card-bdr, #dde3ec);
-  background: var(--ex-thead-bg, #f7f9fc);
+.panel-hdr {
+  display: flex; align-items: center; gap: 8px; padding: 9px 14px; flex-shrink: 0;
+  background: rgba(10,14,20,.9); border-bottom: 1px solid var(--dh-bdr2);
 }
-.dtc-dot {
-  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-  animation: none;
-}
-.dot-live  { background: #27ae60; box-shadow: 0 0 5px #27ae60; animation: pulse 1.5s infinite; }
-.dot-stale { background: #e67e22; }
-.dot-wait  { background: #bdc3c7; }
-@keyframes pulse {
-  0%, 100% { opacity: 1; } 50% { opacity: .4; }
-}
-.dtc-name  { font-size: 11px; font-weight: 700; letter-spacing: .04em; }
-.dtc-topic { font-size: 9px; opacity: .5; font-family: monospace; }
-.dtc-status {
-  margin-left: auto; font-size: 9px; font-weight: 700;
-  padding: 1px 6px; border-radius: 8px;
-}
-.tc-live  .dtc-status { background: #d5f5e3; color: #1e8449; }
-.tc-stale .dtc-status { background: #fdebd0; color: #935116; }
-.tc-wait  .dtc-status { background: #f0f3f4; color: #7f8c8d; }
-.dtc-ts { font-size: 9px; opacity: .5; }
+.panel-title { font-family: var(--dh-mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+.panel-count { font-family: var(--dh-mono); font-size: 9px; color: var(--dh-text3); background: var(--dh-bg3); padding: 2px 7px; border-radius: 10px; margin-left: 4px; }
+.ph-right { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+.ph-meta  { font-size: 8px; color: var(--dh-text3); }
+.mqtt-dot-sm { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.mdot-ok  { background: var(--dh-green); box-shadow: 0 0 5px #00e87a88; animation: dhpulse 2s infinite; }
+.mdot-err { background: var(--dh-red); }
 
-/* fields */
-.dtc-fields { padding: 8px 12px 10px; }
-.dtc-row {
-  display: flex; justify-content: space-between; align-items: baseline;
-  padding: 3px 0; border-bottom: 1px solid var(--ex-card-bdr, #dde3ec)44;
+/* ── filter row ──────────────────────────────────────────────── */
+.filter-row {
+  display: flex; align-items: center; gap: 5px; padding: 6px 12px;
+  background: rgba(8,12,18,.85); border-bottom: 1px solid var(--dh-bdr); flex-shrink: 0; flex-wrap: wrap;
 }
-.dtc-row:last-child { border-bottom: none; }
-.dtc-field { font-size: 10px; opacity: .7; flex: 1; padding-right: 8px; }
-.dtc-val   { font-size: 11px; font-weight: 600; font-family: monospace; white-space: nowrap; }
-.v-ok   { color: var(--ex-text, #1a1a2e); }
-.v-zero { color: #aaa; }
-.v-null { color: #ccc; font-style: italic; }
+.f-btn {
+  font-family: var(--dh-mono); font-size: 9px; font-weight: 700;
+  padding: 3px 9px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--dh-bdr2); background: transparent;
+  color: var(--dh-text3); transition: all .15s;
+}
+.f-btn:hover { color: var(--dh-text2); border-color: var(--dh-bdr3); }
+.f-btn.active { background: rgba(0,212,255,.12); color:var(--dh-cyan); border-color:rgba(0,212,255,.35); }
+.f-btn.f-grn.active { background: rgba(0,232,122,.10); color:var(--dh-green); border-color:rgba(0,232,122,.32); }
+.f-btn.f-red.active { background: rgba(255,64,64,.12);  color:var(--dh-red);   border-color:rgba(255,64,64,.35); }
+.f-btn.f-amb.active { background: rgba(255,184,0,.10);  color:var(--dh-amber); border-color:rgba(255,184,0,.30); }
+.f-spacer { flex: 1; }
+.f-search {
+  font-family: var(--dh-mono); font-size: 10px;
+  background: rgba(18,28,44,.85); border: 1px solid var(--dh-bdr2);
+  color: var(--dh-text); padding: 3px 8px; border-radius: 5px; outline: none; width: 150px;
+}
+.f-search:focus { border-color: rgba(0,212,255,.4); }
+.f-select {
+  font-family: var(--dh-mono); font-size: 9px;
+  background: rgba(18,28,44,.85); border: 1px solid var(--dh-bdr2);
+  color: var(--dh-text2); padding: 3px 6px; border-radius: 5px; outline: none;
+}
 
-/* two-column blower layout */
-.dtc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
-.dtc-group { }
-.dtc-group-title { font-size: 10px; font-weight: 700; opacity: .5; text-transform: uppercase; letter-spacing: .08em; padding-bottom: 4px; border-bottom: 2px solid var(--ex-card-bdr, #dde3ec); margin-bottom: 4px; }
+/* ── table ───────────────────────────────────────────────────── */
+.tbl-scroll { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dh-bdr2) transparent; }
+.dh-table { width: 100%; border-collapse: collapse; font-family: var(--dh-mono); }
+.dh-table thead th {
+  position: sticky; top: 0; background: rgba(13,17,23,.98); z-index: 2;
+  padding: 7px 10px; font-size: 8.5px; color: var(--dh-text3); letter-spacing: .07em;
+  font-weight: 700; border-bottom: 1px solid var(--dh-bdr2); text-align: left; white-space: nowrap;
+}
+.dh-table tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
+.dh-table tbody tr:hover { background: rgba(25,38,55,.5); }
+.dh-table td { padding: 7px 10px; font-size: 9.5px; vertical-align: middle; white-space: nowrap; }
 
-/* raw dump */
-.dh-raw-toggle {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 10px; opacity: .55; cursor: pointer; padding: 4px 2px;
-  user-select: none; text-transform: uppercase; letter-spacing: .05em;
+.row-err  { background: rgba(255,64,64,.04)  !important; }
+.row-warn { background: rgba(255,120,32,.03) !important; }
+.row-resolved { opacity: .5; }
+
+/* ── badges ──────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 10px; font-size: 8.5px; font-weight: 700;
+  letter-spacing: .05em; white-space: nowrap; border: 1px solid;
 }
-.dh-raw-toggle:hover { opacity: .85; }
-.dh-raw {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px;
+.bdot { width: 6px; height: 6px; border-radius: 50%; }
+.b-online  { background: rgba(0,232,122,.12);  color:var(--dh-green); border-color:rgba(0,232,122,.28); }
+.b-online  .bdot { background:var(--dh-green); animation:dhpulse 2s infinite; }
+.b-offline { background: rgba(255,64,64,.12);  color:var(--dh-red);   border-color:rgba(255,64,64,.28); }
+.b-offline .bdot { background:var(--dh-red);   }
+.b-unknown { background: rgba(58,78,98,.3);    color:var(--dh-text3); border-color:var(--dh-bdr2);      }
+.b-unknown .bdot { background:var(--dh-text3); }
+
+.b-active-err { background:rgba(255,64,64,.10); color:var(--dh-red);   border-color:rgba(255,64,64,.25); }
+.b-resolved   { background:rgba(0,232,122,.08); color:var(--dh-green); border-color:rgba(0,232,122,.20); opacity:.65; }
+
+.b-err-nodata { background:rgba(255,120,32,.12); color:var(--dh-orange); border-color:rgba(255,120,32,.28); }
+.b-err-range  { background:rgba(255,64,64,.12);  color:var(--dh-red);    border-color:rgba(255,64,64,.28); }
+.b-err-parse  { background:rgba(168,85,247,.12); color:var(--dh-purple); border-color:rgba(168,85,247,.28); }
+.b-err-mqtt   { background:rgba(255,184,0,.12);  color:var(--dh-amber);  border-color:rgba(255,184,0,.28); }
+.b-err-fault  { background:rgba(255,64,64,.14);  color:var(--dh-red);    border-color:rgba(255,64,64,.35); }
+
+/* ── device table cells ──────────────────────────────────────── */
+.dev-id    { font-family:var(--dh-mono); font-size:9px; color:var(--dh-cyan); }
+.dev-name-cell { max-width:155px; overflow:hidden; text-overflow:ellipsis; font-size:11px; color:var(--dh-text); }
+.dev-type  { font-size:9px; color:var(--dh-text3); }
+.dev-topic-cell { max-width:140px; overflow:hidden; text-overflow:ellipsis; color:var(--dh-text3); font-size:8.5px; }
+.dev-val   { font-size:10px; color:var(--dh-text3); }
+.dev-val.val-live { color:var(--dh-amber); }
+.dev-unit  { font-size:8px; color:var(--dh-text3); }
+.err-flag  { color:var(--dh-red); font-size:10px; margin-left:4px; }
+
+/* ── signal quality ──────────────────────────────────────────── */
+.sq-wrap { display:flex; align-items:center; gap:5px; }
+.sq-bar  { width:50px; height:4px; background:rgba(40,55,75,.7); border-radius:2px; overflow:hidden; }
+.sq-fill { height:100%; border-radius:2px; transition:width .6s ease; }
+.sq-pct  { font-size:9px; min-width:24px; text-align:right; }
+
+/* ── last seen ───────────────────────────────────────────────── */
+.last-seen { font-size:8.5px; color:var(--dh-text3); }
+.ls-recent { color:var(--dh-green) !important; }
+.ls-stale  { color:var(--dh-amber) !important; }
+.ls-dead   { color:var(--dh-red)   !important; }
+
+/* ── error log cells ─────────────────────────────────────────── */
+.ts-cell     { font-size:8.5px; color:var(--dh-text3); white-space:nowrap; }
+.dev-name-sm { font-size:8px; color:var(--dh-text3); }
+.detail-cell { max-width:175px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dh-text2); font-size:9px; }
+.err-val     { font-size:9px; color:var(--dh-orange); font-family:var(--dh-mono); }
+
+/* ── resolve button ──────────────────────────────────────────── */
+.res-btn {
+  font-family:var(--dh-mono); font-size:8px; font-weight:700;
+  padding:2px 8px; border-radius:4px; cursor:pointer;
+  border:1px solid rgba(0,232,122,.25); background:rgba(0,232,122,.07);
+  color:var(--dh-green); transition:all .15s; white-space:nowrap;
 }
-.dh-raw-block {
-  background: var(--ex-card-bg, #fff);
-  border: 1px solid var(--ex-card-bdr, #dde3ec);
-  border-radius: 8px; padding: 10px; font-size: 10px; font-family: monospace;
+.res-btn:hover:not(:disabled) { background:rgba(0,232,122,.15); }
+.res-btn:disabled { opacity:.35; cursor:default; }
+
+/* ── empty state ─────────────────────────────────────────────── */
+.empty-state {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  height:100px; gap:6px; color:var(--dh-text3); font-size:10px;
 }
-.drb-title { font-weight: 700; font-size: 11px; margin-bottom: 6px; color: var(--ex-accent, #f39c12); }
-.drb-row { display: flex; gap: 8px; padding: 1px 0; }
-.drb-key { opacity: .6; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.drb-val { font-weight: 600; white-space: nowrap; }
-.drb-empty { opacity: .4; font-style: italic; }
+.es-icon { font-size:26px; opacity:.4; }
 </style>
