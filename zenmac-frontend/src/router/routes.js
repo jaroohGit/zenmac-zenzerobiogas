@@ -126,6 +126,12 @@ export default [
         component: () => import("../views/sta-kd/control/index.vue"),
         meta: { title: "Auto Mode" },
       },
+      {
+        path: "device-status",
+        name: "kd-device-status",
+        component: () => import("../views/kd/device-status/index.vue"),
+        meta: { title: "Device Health" },
+      },
     ],
   },
 

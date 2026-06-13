@@ -159,6 +159,7 @@ const NAV = [
   { to: '/kd/app/pump',         label: 'Pump',              icon: 'bx bx-water',            badge: null },
   { to: '/kd/app/blower',       label: 'Blower',            icon: 'bx bx-wind',             badge: null },
   { to: '/kd/app/auto-mode',    label: 'Auto Mode',         icon: 'bx bx-brain',            badge: null },
+  { to: '/kd/app/device-status', label: 'Device Health',   icon: 'bx bx-pulse',            badge: null },
 ];
 
 const PAGE_TITLES = {
@@ -170,6 +171,7 @@ const PAGE_TITLES = {
   '/kd/app/blower':         'Blower',
   '/kd/app/energy':         'Energy',
   '/kd/app/auto-mode':      'Auto Mode',
+  '/kd/app/device-status': 'Device Health',
 };
 
 export default {
