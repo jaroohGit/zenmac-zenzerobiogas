@@ -46,6 +46,24 @@
                 </div>
               </div>
             </div>
+            <div class="ncd-plant ncd-soon">
+              <div class="ncdp-left">
+                <span class="ncdp-dot soon"></span>
+                <div>
+                  <div class="ncdp-name">STA-CR</div>
+                  <div class="ncdp-desc">Coming soon</div>
+                </div>
+              </div>
+            </div>
+            <div class="ncd-plant ncd-soon">
+              <div class="ncdp-left">
+                <span class="ncdp-dot soon"></span>
+                <div>
+                  <div class="ncdp-name">STA-NY <span style="font-size:10px;opacity:.6;">(PC)</span></div>
+                  <div class="ncdp-desc">Coming soon</div>
+                </div>
+              </div>
+            </div>
           </div>
         </li>
 
