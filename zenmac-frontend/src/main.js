@@ -16,6 +16,7 @@ import VueApexCharts from "vue3-apexcharts";
 import { vMaska } from "maska"
 
 import VueFeather from 'vue-feather';
+import ProhibitToast from '@/components/ProhibitToast.vue';
 
 import '@/assets/scss/config/saas/app.scss';
 import '@/assets/scss/mermaid.min.css';
@@ -54,6 +55,7 @@ createApp(App)
     .use(VueApexCharts)
     .use(BootstrapVueNext)
     .component(VueFeather.type, VueFeather)
+    .component('ProhibitToast', ProhibitToast)
     .directive("maska", vMaska)
     .use(i18n)
     .use(VueSweetalert2)
