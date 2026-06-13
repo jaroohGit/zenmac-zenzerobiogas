@@ -373,15 +373,15 @@ export default {
       const now = Date.now();
       this.registry.forEach(d => {
         if (d.topic_sub.split('/').pop() !== key) return;
-        this.$set(d, 'lastSeen', now);
-        this.$set(d, 'status', 'online');
-        this.$set(d, 'msgCount', (d.msgCount || 0) + 1);
+        d.lastSeen = now;
+        d.status   = 'online';
+        d.msgCount = (d.msgCount || 0) + 1;
 
         const raw = data[d.path];
         if (raw !== undefined && raw !== null) {
           const num = parseFloat(raw);
           const disp = !isNaN(num) ? (Number.isInteger(num) ? String(num) : num.toFixed(2)) : String(raw);
-          this.$set(d, 'lastVal', disp);
+          d.lastVal = disp;
           this._validateRange(d, num);
         }
 
@@ -431,7 +431,7 @@ export default {
         if (!d.lastSeen) return;
 
         if (now - d.lastSeen > OFFLINE_MS && d.status === 'online') {
-          this.$set(d, 'status', 'offline');
+          d.status = 'offline';
           changed = true;
         }
 
@@ -471,7 +471,7 @@ export default {
       };
       this.errorLog.unshift(entry);
       if (this.errorLog.length > MAX_LOG) this.errorLog = this.errorLog.slice(0, MAX_LOG);
-      if (d) this.$set(d, 'errCount', (d.errCount || 0) + 1);
+      if (d) d.errCount = (d.errCount || 0) + 1;
       this._saveLog();
     },
 
@@ -498,8 +498,8 @@ export default {
     resolveError(id) {
       const e = this.errorLog.find(x => x.id === id);
       if (e) {
-        this.$set(e, 'resolved', true);
-        this.$set(e, 'resolved_at', new Date().toISOString());
+        e.resolved    = true;
+        e.resolved_at = new Date().toISOString();
         this._saveLog();
       }
     },
@@ -529,9 +529,9 @@ export default {
       ['KD_AT2_ORP-01','KD_TB01_Kw','KD_AT1_pH-01'].forEach(id => {
         const d = this.registry.find(x => x.id === id);
         if (d) {
-          this.$set(d, 'status', 'online');
-          this.$set(d, 'lastSeen', Date.now() - Math.random() * 30000);
-          this.$set(d, 'msgCount', (d.msgCount||0) + 5);
+          d.status   = 'online';
+          d.lastSeen = Date.now() - Math.random() * 30000;
+          d.msgCount = (d.msgCount || 0) + 5;
         }
       });
       this.tickClock++;
