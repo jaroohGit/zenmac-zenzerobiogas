@@ -379,10 +379,15 @@ export default {
 
         const raw = data[d.path];
         if (raw !== undefined && raw !== null) {
-          const num = parseFloat(raw);
-          const disp = !isNaN(num) ? (Number.isInteger(num) ? String(num) : num.toFixed(2)) : String(raw);
-          d.lastVal = disp;
-          this._validateRange(d, num);
+          if (d.unit === 'on/off') {
+            const on = raw === 1 || raw === true || raw === '1' || String(raw).toLowerCase() === 'true';
+            d.lastVal = on ? 'Run' : 'Off';
+          } else {
+            const num = parseFloat(raw);
+            const disp = !isNaN(num) ? (Number.isInteger(num) ? String(num) : num.toFixed(2)) : String(raw);
+            d.lastVal = disp;
+            this._validateRange(d, num);
+          }
         }
 
         if (data.fault === true || data.fault === 1 || data.error === true) {
