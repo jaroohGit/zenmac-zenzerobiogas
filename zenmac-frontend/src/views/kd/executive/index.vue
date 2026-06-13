@@ -49,6 +49,21 @@
       </div>
     </div>
 
+    <!-- ── KEY INSIGHTS ── -->
+    <div class="ins-bar" v-if="insights.length">
+      <span class="ins-lbl">KEY INSIGHTS</span>
+      <div class="ins-chips">
+        <div class="ins-chip" v-for="(ins,i) in insights" :key="i" :class="`ic-${ins.sev}`">
+          <i :class="`bx ${ins.icon} ic-icon`"></i>
+          <span class="ic-text">{{ ins.text }}</span>
+        </div>
+      </div>
+      <label class="ins-budget" v-if="viewMode==='monthly'">
+        <span class="ins-budget-lbl">งบ/เดือน ฿</span>
+        <input type="number" v-model.number="budgetBaht" class="ins-budget-input" min="0" step="1000" placeholder="ไม่ระบุ"/>
+      </label>
+    </div>
+
     <!-- ── MONTHLY BODY: left KPI panel + charts ── -->
     <div class="monthly-body">
 
@@ -283,7 +298,7 @@ const RPAD  = 50; // right padding for charts without a right axis — keeps X-a
 export default {
   name: 'KDExecutive',
   data() {
-    return { monthOffset:0, monthData:[], prevMonthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, currentThemeKey:'slate', THEMES };
+    return { monthOffset:0, monthData:[], prevMonthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, budgetBaht:0, currentThemeKey:'slate', THEMES };
   },
   watch: {
     costRate() {
@@ -532,6 +547,9 @@ export default {
       const kwh=s.kwhTotal||0, eff=kwh?(total/kwh).toFixed(2):'—';
       return { serum, latex, total, kwh, eff, serumPct:Math.round(serum/total*100), latexPct:Math.round(latex/total*100) };
     },
+    insights() {
+      return this.viewMode==='annual' ? this._annualInsights() : this._monthlyInsights();
+    },
   },
   async mounted() {
     this._chartMain=null; this._chartORP=null; this._chartPerf=null; this._chartBlower=null;
@@ -566,6 +584,94 @@ export default {
       const pct=(a-b)/Math.abs(b)*100;
       const good=higherIsBetter?pct>0:pct<0;
       return { arrow:pct>=0?'▲':'▼', pct:Math.abs(pct).toFixed(1), color:good?this.t.hOk:this.t.hCrit };
+    },
+    _monthlyInsights() {
+      const s=this.stats;
+      const d=this.monthData.filter(r=>r.flow!=null);
+      if (!d.length) return [];
+      const out=[];
+      const dim=this.monthData.length, elapsed=d.length;
+
+      // ORP achievement
+      const orpOk=d.filter(r=>r.orp_serum>this.threshORP&&r.orp_latex>this.threshORP).length;
+      const orpPct=Math.round(orpOk/elapsed*100);
+      out.push({ sev:orpPct>=70?'good':orpPct>=40?'warning':'crit', icon:'bx-droplet',
+        text:`ORP ผ่านเกณฑ์ ${this.threshORP} mV — ${orpOk}/${elapsed} วัน (${orpPct}%)` });
+
+      // Treatment efficiency vs threshold
+      const eff=parseFloat(s.efficiency);
+      if (!isNaN(eff)) {
+        const ratio=eff/this.threshEff;
+        const diffPct=Math.abs(Math.round((ratio-1)*100));
+        out.push({ sev:ratio>=1?'good':ratio>=0.8?'warning':'crit', icon:'bx-trending-up',
+          text:ratio>=1
+            ? `ประสิทธิภาพ ${eff.toFixed(2)} m³/kWh ผ่านเป้า (สูงกว่า ${diffPct}%)`
+            : `ประสิทธิภาพ ${eff.toFixed(2)} m³/kWh ต่ำกว่าเป้า ${this.threshEff} อยู่ ${diffPct}%` });
+      }
+
+      // Cost vs budget (or cost info)
+      const tc=parseInt(s.totalCost)||0;
+      if (this.budgetBaht>0) {
+        const bpct=Math.round(tc/this.budgetBaht*100);
+        out.push({ sev:bpct<80?'good':bpct<=100?'warning':'crit', icon:'bx-money',
+          text:`ค่าพลังงาน ฿${tc.toLocaleString()} = ${bpct}% ของงบ ฿${this.budgetBaht.toLocaleString()}` });
+      } else {
+        const daily=elapsed?Math.round(tc/elapsed):0;
+        out.push({ sev:'info', icon:'bx-money',
+          text:`ค่าพลังงานสะสม ฿${tc.toLocaleString()} (เฉลี่ย ฿${daily.toLocaleString()}/วัน)` });
+      }
+
+      // Days below efficiency threshold
+      const daysBelow=d.filter(r=>r.flow&&r.kwh&&(r.flow/r.kwh)<this.threshEff).length;
+      if (daysBelow>0) {
+        const blwPct=Math.round(daysBelow/elapsed*100);
+        out.push({ sev:blwPct>30?'warning':'info', icon:'bx-bar-chart-square',
+          text:`${daysBelow} วัน (${blwPct}%) ประสิทธิภาพต่ำกว่าเป้า ${this.threshEff} m³/kWh` });
+      }
+
+      // Month-end projection (current month only)
+      if (this.monthOffset===0&&elapsed>0&&elapsed<dim) {
+        const projFlow=Math.round(s.totalFlow/elapsed*dim);
+        const projCost=Math.round(tc/elapsed*dim);
+        out.push({ sev:'info', icon:'bx-calendar-check',
+          text:`คาดสิ้นเดือน: Flow ~${projFlow.toLocaleString()} m³ · ค่าพลังงาน ~฿${projCost.toLocaleString()}` });
+      }
+
+      // Sort: crit → warning → good → info, then cap at 5
+      const ord={crit:0,warning:1,good:2,info:3};
+      return out.sort((a,b)=>ord[a.sev]-ord[b.sev]).slice(0,5);
+    },
+    _annualInsights() {
+      const s=this.annualStats;
+      const d=this.annualData.filter(r=>r.flow!=null||r.serum!=null);
+      if (!d.length) return [];
+      const out=[];
+
+      // Annual efficiency
+      const eff=s.kwhTotal?s.totalFlow/s.kwhTotal:0;
+      out.push({ sev:eff>=this.threshEff?'good':eff>=this.threshEff*0.8?'warning':'crit', icon:'bx-trending-up',
+        text:`ประสิทธิภาพเฉลี่ยรายปี ${eff.toFixed(2)} m³/kWh` });
+
+      // ORP months
+      const orpOk=d.filter(r=>r.orp_serum>this.threshORP&&r.orp_latex>this.threshORP).length;
+      const orpPct=Math.round(orpOk/d.length*100);
+      out.push({ sev:orpPct>=70?'good':orpPct>=40?'warning':'crit', icon:'bx-droplet',
+        text:`ORP ผ่านเกณฑ์ ${orpOk}/${d.length} เดือน (${orpPct}%)` });
+
+      // Annual cost
+      const annualCost=Math.round(s.kwhTotal*this.costRate);
+      out.push({ sev:'info', icon:'bx-money',
+        text:`ค่าพลังงานรวม ฿${annualCost.toLocaleString()} จาก ${s.months} เดือน` });
+
+      // Avg flow/month
+      if (s.months>0) {
+        const avgFlow=Math.round(s.totalFlow/s.months);
+        out.push({ sev:'info', icon:'bx-water',
+          text:`Flow เฉลี่ย ${avgFlow.toLocaleString()} m³/เดือน (รวม ${s.totalFlow.toLocaleString()} m³)` });
+      }
+
+      const ord={crit:0,warning:1,good:2,info:3};
+      return out.sort((a,b)=>ord[a.sev]-ord[b.sev]).slice(0,5);
     },
     destroyCharts() {
       [this._chartMain,this._chartORP,this._chartPerf,this._chartBlower].forEach(c=>c?.destroy());
@@ -999,4 +1105,42 @@ export default {
 .sc-fstat-pct {
   font-size:9px; color:var(--ex-text-sub); min-width:30px; text-align:right;
 }
+
+/* ── Key Insights bar ── */
+.ins-bar {
+  display:flex; align-items:center; gap:6px; flex-shrink:0;
+  padding:0 2px;
+}
+.ins-lbl {
+  font-size:8px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--ex-text-sub); white-space:nowrap; flex-shrink:0;
+}
+.ins-chips {
+  display:flex; gap:4px; flex:1; min-width:0;
+}
+.ins-chip {
+  display:flex; align-items:center; gap:5px;
+  padding:5px 9px; border-radius:5px; border:1px solid;
+  flex:1; min-width:0; cursor:default;
+  transition:filter .15s;
+}
+.ins-chip:hover { filter:brightness(1.12); }
+.ic-good    { background:rgba(0,232,122,.06);  border-color:rgba(0,232,122,.22);  color:var(--ex-h-ok); }
+.ic-warning { background:rgba(200,169,110,.06); border-color:rgba(200,169,110,.22); color:var(--ex-h-warn); }
+.ic-crit    { background:rgba(168,104,104,.06); border-color:rgba(168,104,104,.22); color:var(--ex-h-crit); }
+.ic-info    { background:rgba(74,158,186,.06);  border-color:rgba(74,158,186,.22);  color:var(--ex-accent); }
+.ic-icon { font-size:13px; flex-shrink:0; }
+.ic-text { font-size:9px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Budget input */
+.ins-budget { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+.ins-budget-lbl { font-size:8px; color:var(--ex-text-sub); white-space:nowrap; }
+.ins-budget-input {
+  width:72px; font-size:9px; font-family:'JetBrains Mono',monospace;
+  text-align:right; padding:3px 6px; border-radius:4px;
+  border:1px solid var(--ex-mn-bdr); background:var(--ex-mn-bg);
+  color:var(--ex-label); outline:none; transition:border-color .15s;
+}
+.ins-budget-input:focus { border-color:var(--ex-accent); }
+.ins-budget-input::placeholder { opacity:.35; }
 </style>
