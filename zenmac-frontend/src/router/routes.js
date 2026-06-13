@@ -132,6 +132,12 @@ export default [
         component: () => import("../views/kd/device-status/index.vue"),
         meta: { title: "Device Health" },
       },
+      {
+        path: "rd-demo",
+        name: "kd-rd-demo",
+        component: () => import("../views/kd/rd-demo/index.vue"),
+        meta: { title: "R&D Demo" },
+      },
     ],
   },
 

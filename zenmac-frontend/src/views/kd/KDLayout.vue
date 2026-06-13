@@ -160,6 +160,7 @@ const NAV = [
   { to: '/kd/app/blower',       label: 'Blower',            icon: 'bx bx-wind',             badge: null },
   { to: '/kd/app/auto-mode',    label: 'Auto Mode',         icon: 'bx bx-brain',            badge: null },
   { to: '/kd/app/device-status', label: 'Device Health',   icon: 'bx bx-pulse',            badge: null },
+  { to: '/kd/app/rd-demo',      label: 'R&D Demo',         icon: 'bx bx-test-tube',        badge: 'DEV', badgeClass: 'badge-dev' },
 ];
 
 const PAGE_TITLES = {
@@ -172,6 +173,7 @@ const PAGE_TITLES = {
   '/kd/app/energy':         'Energy',
   '/kd/app/auto-mode':      'Auto Mode',
   '/kd/app/device-status': 'Device Health',
+  '/kd/app/rd-demo':       'R&D Demo',
 };
 
 export default {
@@ -419,6 +421,7 @@ export default {
   padding: 2px 6px; border-radius: 3px;
 }
 .badge-live { background: rgba(0,232,122,.2); color: var(--green); border: 1px solid rgba(0,232,122,.35); }
+.badge-dev  { background: rgba(168,85,247,.18); color: #c084fc; border: 1px solid rgba(168,85,247,.35); }
 
 /* Bottom KPI */
 .kd-sidebar-bottom { flex-shrink: 0; padding: 8px; }
