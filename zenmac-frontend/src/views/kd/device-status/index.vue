@@ -1,5 +1,5 @@
 <template>
-  <div class="dh-outer">
+  <div class="dh-outer" :class="{'dh-light': lightTheme}">
 
     <!-- ── SUMMARY BAR ─────────────────────────────────────────── -->
     <div class="summary-bar">
@@ -34,6 +34,9 @@
       <div class="sb-spacer"></div>
       <div class="sb-actions">
         <span class="refresh-dot" v-show="refreshing"></span>
+        <button class="act-btn btn-theme" @click="lightTheme=!lightTheme" :title="lightTheme?'Switch to Dark':'Switch to Light'">
+          {{ lightTheme ? '🌙 Dark' : '☀️ Light' }}
+        </button>
         <button class="act-btn btn-cyan"  @click="exportCSV">↓ Export CSV</button>
         <button class="act-btn btn-amber" @click="clearResolved">🗑 Clear Resolved</button>
         <button class="act-btn btn-green" @click="simulateSampleErrors" title="สร้าง sample errors เพื่อทดสอบ">🧪 Demo Errors</button>
@@ -322,6 +325,7 @@ export default {
       errTypeFilter: '',
       errDevFilter:  '',
       devSearch:     '',
+      lightTheme:    false,
       refreshing:    false,
       _noDataTs:     {},
       _rangeTs:      {},
@@ -808,4 +812,85 @@ export default {
   height:100px; gap:6px; color:var(--dh-text3); font-size:10px;
 }
 .es-icon { font-size:26px; opacity:.4; }
+
+/* ── theme toggle button ─────────────────────────────────────── */
+.btn-theme {
+  background: rgba(255,255,255,.08); color:var(--dh-text2);
+  border-color: var(--dh-bdr2);
+}
+.btn-theme:hover { background: rgba(255,255,255,.15); }
+
+/* ── LIGHT THEME overrides ───────────────────────────────────── */
+.dh-light {
+  --dh-bg0:   #f0f2f5;
+  --dh-bg1:   #ffffff;
+  --dh-bg2:   #f7f9fc;
+  --dh-bg3:   #eef1f6;
+  --dh-bdr:   #dde3ec;
+  --dh-bdr2:  #c8d3e0;
+  --dh-bdr3:  #a0b0c4;
+  --dh-cyan:  #0088bb;
+  --dh-green: #1a8a50;
+  --dh-amber: #b07800;
+  --dh-red:   #cc2222;
+  --dh-orange:#cc5500;
+  --dh-purple:#7c3aed;
+  --dh-text:  #1a2535;
+  --dh-text2: #4a5f78;
+  --dh-text3: #8aa0b8;
+  background: var(--dh-bg0); color: var(--dh-text);
+}
+.dh-light .summary-bar { background: #ffffff; border-bottom-color: var(--dh-bdr2); }
+.dh-light .panel-hdr   { background: #f7f9fc; border-bottom-color: var(--dh-bdr2); }
+.dh-light .filter-row  { background: #f0f2f5; border-bottom-color: var(--dh-bdr);  }
+.dh-light .dh-table thead th { background: #eef1f6; color: var(--dh-text2); }
+.dh-light .dh-table tbody tr:hover { background: rgba(0,136,187,.05); }
+.dh-light .dh-table tbody tr { border-bottom-color: rgba(0,0,0,.06); }
+.dh-light .panel-left  { border-right-color: var(--dh-bdr2); }
+.dh-light .sb-item     { border-right-color: var(--dh-bdr2); }
+.dh-light .sb-sep      { border-right-color: var(--dh-bdr3); }
+
+.dh-light .f-btn       { color: var(--dh-text2); border-color: var(--dh-bdr2); }
+.dh-light .f-btn:hover { background: rgba(0,0,0,.05); color: var(--dh-text); }
+.dh-light .f-btn.active       { background: rgba(0,136,187,.12); color:var(--dh-cyan); border-color:rgba(0,136,187,.4); }
+.dh-light .f-btn.f-grn.active { background: rgba(26,138,80,.10);  color:var(--dh-green); border-color:rgba(26,138,80,.35); }
+.dh-light .f-btn.f-red.active { background: rgba(204,34,34,.10);  color:var(--dh-red);   border-color:rgba(204,34,34,.35); }
+.dh-light .f-btn.f-amb.active { background: rgba(176,120,0,.10);  color:var(--dh-amber); border-color:rgba(176,120,0,.35); }
+
+.dh-light .f-search,
+.dh-light .f-select {
+  background: #ffffff; color: var(--dh-text);
+  border-color: var(--dh-bdr2);
+}
+
+.dh-light .act-btn { border-color: var(--dh-bdr2); }
+.dh-light .btn-theme  { background: rgba(0,0,0,.05); color:var(--dh-text2); border-color:var(--dh-bdr2); }
+.dh-light .btn-cyan   { background: rgba(0,136,187,.10); color:var(--dh-cyan);  border-color:rgba(0,136,187,.3); }
+.dh-light .btn-amber  { background: rgba(176,120,0,.10);  color:var(--dh-amber); border-color:rgba(176,120,0,.3); }
+.dh-light .btn-green  { background: rgba(26,138,80,.10);  color:var(--dh-green); border-color:rgba(26,138,80,.3);  }
+
+.dh-light .b-online  { background: rgba(26,138,80,.12);  color:var(--dh-green); border-color:rgba(26,138,80,.3);  }
+.dh-light .b-offline { background: rgba(204,34,34,.10);  color:var(--dh-red);   border-color:rgba(204,34,34,.3);  }
+.dh-light .b-unknown { background: rgba(0,0,0,.06);      color:var(--dh-text3); border-color:var(--dh-bdr2);      }
+.dh-light .b-active-err { background:rgba(204,34,34,.09); color:var(--dh-red);   border-color:rgba(204,34,34,.25); }
+.dh-light .b-resolved   { background:rgba(26,138,80,.08);  color:var(--dh-green); border-color:rgba(26,138,80,.22); }
+.dh-light .b-err-nodata { background:rgba(204,85,0,.10);   color:var(--dh-orange); border-color:rgba(204,85,0,.28); }
+.dh-light .b-err-range  { background:rgba(204,34,34,.10);  color:var(--dh-red);    border-color:rgba(204,34,34,.28); }
+.dh-light .b-err-parse  { background:rgba(124,58,237,.10); color:var(--dh-purple); border-color:rgba(124,58,237,.28); }
+.dh-light .b-err-mqtt   { background:rgba(176,120,0,.10);  color:var(--dh-amber);  border-color:rgba(176,120,0,.28); }
+.dh-light .b-err-fault  { background:rgba(204,34,34,.12);  color:var(--dh-red);    border-color:rgba(204,34,34,.35); }
+
+.dh-light .panel-count { background: var(--dh-bg3); color: var(--dh-text2); }
+.dh-light .dev-id      { color: var(--dh-cyan); }
+.dh-light .dev-val.val-live { color: var(--dh-amber); }
+.dh-light .ts-cell,
+.dh-light .dev-name-sm { color: var(--dh-text3); }
+.dh-light .detail-cell { color: var(--dh-text2); }
+.dh-light .err-val     { color: var(--dh-orange); }
+.dh-light .res-btn { border-color:rgba(26,138,80,.3); background:rgba(26,138,80,.07); color:var(--dh-green); }
+.dh-light .res-btn:hover:not(:disabled) { background:rgba(26,138,80,.15); }
+.dh-light .row-err  { background: rgba(204,34,34,.04)  !important; }
+.dh-light .row-warn { background: rgba(204,85,0,.03)   !important; }
+.dh-light .sq-bar   { background: rgba(0,0,0,.1); }
+.dh-light .refresh-dot { background: var(--dh-cyan); }
 </style>
