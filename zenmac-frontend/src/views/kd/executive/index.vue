@@ -60,19 +60,32 @@
       </div>
     </div>
 
-    <!-- ── KEY INSIGHTS ── -->
-    <div class="ins-bar" v-if="insights.length">
-      <span class="ins-lbl">KEY INSIGHTS</span>
-      <div class="ins-chips">
-        <div class="ins-chip" v-for="(ins,i) in insights" :key="i" :class="`ic-${ins.sev}`">
-          <i :class="`bx ${ins.icon} ic-icon`"></i>
-          <span class="ic-text">{{ ins.text }}</span>
+    <!-- ── KEY INSIGHTS (dropdown) ── -->
+    <div class="ins-bar" v-if="insights.length" :class="{open:insOpen}">
+
+      <!-- Collapsed header — always visible, click to toggle -->
+      <div class="ins-header" @click="insOpen=!insOpen">
+        <span class="ins-lbl">KEY INSIGHTS</span>
+        <span class="ins-sev-dots">
+          <span v-for="(ins,i) in insights" :key="i"
+            class="ins-sev-dot" :class="`isd-${ins.sev}`" :title="ins.text"></span>
+        </span>
+        <span class="ins-count">{{ insights.length }}</span>
+        <label class="ins-budget" v-if="viewMode==='monthly'" @click.stop>
+          <span class="ins-budget-lbl">งบ/เดือน ฿</span>
+          <input type="number" v-model.number="budgetBaht" class="ins-budget-input" min="0" step="1000" placeholder="ไม่ระบุ"/>
+        </label>
+        <i class="bx ins-chevron" :class="insOpen?'bx-chevron-up':'bx-chevron-down'"></i>
+      </div>
+
+      <!-- Expandable panel — max-height transition in normal flow -->
+      <div class="ins-panel">
+        <div class="ins-row" v-for="(ins,i) in insights" :key="i" :class="`ic-${ins.sev}`">
+          <i :class="`bx ${ins.icon} ir-icon`"></i>
+          <span class="ir-text">{{ ins.text }}</span>
         </div>
       </div>
-      <label class="ins-budget" v-if="viewMode==='monthly'">
-        <span class="ins-budget-lbl">งบ/เดือน ฿</span>
-        <input type="number" v-model.number="budgetBaht" class="ins-budget-input" min="0" step="1000" placeholder="ไม่ระบุ"/>
-      </label>
+
     </div>
 
     <!-- ── MONTHLY BODY: left KPI panel + charts ── -->
@@ -311,7 +324,7 @@ const RPAD  = 50; // right padding for charts without a right axis — keeps X-a
 export default {
   name: 'KDExecutive',
   data() {
-    return { monthOffset:0, monthData:[], prevMonthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, budgetBaht:0, currentThemeKey:'slate', THEMES, showTbdCards:false, dataTimestamp:null };
+    return { monthOffset:0, monthData:[], prevMonthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, budgetBaht:0, currentThemeKey:'slate', THEMES, showTbdCards:false, dataTimestamp:null, insOpen:false };
   },
   watch: {
     costRate() {
@@ -1137,34 +1150,58 @@ export default {
   font-size:9px; color:var(--ex-text-sub); min-width:30px; text-align:right;
 }
 
-/* ── Key Insights bar ── */
-.ins-bar {
-  display:flex; align-items:center; gap:6px; flex-shrink:0;
-  padding:0 2px;
+/* ── Key Insights dropdown ── */
+.ins-bar { flex-shrink:0; }
+
+.ins-header {
+  display:flex; align-items:center; gap:8px; cursor:pointer;
+  padding:5px 10px; border-radius:6px;
+  border:1px solid var(--ex-card-bdr); background:var(--ex-card-bg);
+  user-select:none; transition:background .15s;
 }
+.ins-header:hover { filter:brightness(1.08); }
+
 .ins-lbl {
   font-size:8px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
   color:var(--ex-text-sub); white-space:nowrap; flex-shrink:0;
 }
-.ins-chips {
-  display:flex; gap:4px; flex:1; min-width:0;
+.ins-sev-dots { display:flex; gap:3px; align-items:center; }
+.ins-sev-dot  { width:6px; height:6px; border-radius:50%; flex-shrink:0; opacity:.85; }
+.isd-good     { background:var(--ex-h-ok); }
+.isd-warning  { background:var(--ex-h-warn); }
+.isd-crit     { background:var(--ex-h-crit); }
+.isd-info     { background:var(--ex-accent); }
+
+.ins-count {
+  font-size:9px; font-weight:700; padding:1px 6px; border-radius:10px;
+  background:rgba(255,255,255,.06); color:var(--ex-label);
 }
-.ins-chip {
-  display:flex; align-items:center; gap:5px;
-  padding:5px 9px; border-radius:5px; border:1px solid;
-  flex:1; min-width:0; cursor:default;
-  transition:filter .15s;
-}
-.ins-chip:hover { filter:brightness(1.12); }
+.ins-chevron { font-size:15px; color:var(--ex-text-sub); margin-left:auto; flex-shrink:0; transition:transform .22s; }
+.ins-bar.open .ins-chevron { transform:rotate(180deg); }
+
+/* Severity colors (shared by header dots and panel rows) */
 .ic-good    { background:rgba(0,232,122,.06);  border-color:rgba(0,232,122,.22);  color:var(--ex-h-ok); }
 .ic-warning { background:rgba(200,169,110,.06); border-color:rgba(200,169,110,.22); color:var(--ex-h-warn); }
 .ic-crit    { background:rgba(168,104,104,.06); border-color:rgba(168,104,104,.22); color:var(--ex-h-crit); }
 .ic-info    { background:rgba(74,158,186,.06);  border-color:rgba(74,158,186,.22);  color:var(--ex-accent); }
-.ic-icon { font-size:13px; flex-shrink:0; }
-.ic-text { font-size:9px; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-/* Budget input */
-.ins-budget { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+/* Expandable panel */
+.ins-panel {
+  max-height:0; overflow:hidden;
+  transition:max-height .22s ease;
+}
+.ins-bar.open .ins-panel { max-height:300px; }
+
+.ins-row {
+  display:flex; align-items:flex-start; gap:9px;
+  padding:7px 10px; border-radius:6px; border:1px solid;
+  margin-top:3px;
+}
+.ir-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
+.ir-text  { font-size:9px; line-height:1.55; flex:1; }
+
+/* Budget input (inside header) */
+.ins-budget { display:flex; align-items:center; gap:4px; flex-shrink:0; cursor:default; }
 .ins-budget-lbl { font-size:8px; color:var(--ex-text-sub); white-space:nowrap; }
 .ins-budget-input {
   width:72px; font-size:9px; font-family:'JetBrains Mono',monospace;
@@ -1214,7 +1251,12 @@ export default {
   .kpi-chip { background:#eee !important; border-color:#bbb !important; color:#333 !important; }
   .kpi-tag, .kpi-foot, .kpi-mom-vs { color:#555 !important; }
 
-  .ins-bar { background:#e8edf2 !important; border-radius:6px; padding:5px 8px !important; }
+  .ins-bar { border-color:#ccc !important; }
+  .ins-header { background:#e8edf2 !important; border-color:#ccc !important; }
+  .ins-lbl, .ins-count { color:#446 !important; }
+  .ins-chevron { display:none !important; }
+  .ins-panel { max-height:none !important; }
+  .ins-row { margin-top:2px !important; }
   .ic-good    { background:#e6f9ef !important; border-color:#6ecf9a !important; color:#1a7a45 !important; }
   .ic-warning { background:#fef8e7 !important; border-color:#c4a040 !important; color:#7a5c00 !important; }
   .ic-crit    { background:#fdecea !important; border-color:#c47070 !important; color:#8a2020 !important; }
