@@ -19,6 +19,13 @@
         <button class="mn-btn" @click="changeMonth(-1)" :disabled="monthOffset<=0"><i class="bx bx-chevron-right"></i></button>
       </div>
 
+      <!-- Year navigation (annual mode only) -->
+      <div class="month-nav" v-if="viewMode==='annual'">
+        <button class="mn-btn" @click="changeYear(-1)" :disabled="annualYear <= currentYear - 5" title="ปีก่อนหน้า"><i class="bx bx-chevron-left"></i></button>
+        <span class="mn-label" style="min-width:80px">{{ annualYear }}</span>
+        <button class="mn-btn" @click="changeYear(1)"  :disabled="annualYear >= currentYear" title="ปีถัดไป"><i class="bx bx-chevron-right"></i></button>
+      </div>
+
       <!-- Theme switcher -->
       <div class="theme-sw" title="Switch theme">
         <button
@@ -281,9 +288,10 @@ function h2r(hex, a) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-function genAnnualData() {
+function genAnnualData(year) {
   const now = new Date();
-  const y = now.getFullYear(), curM = now.getMonth();
+  const y = year || now.getFullYear();
+  const curM = (y === now.getFullYear()) ? now.getMonth() : 11;
   const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return labels.map((label, m) => {
     if (m > curM) return { label, month:m+1, serum:null, latex:null, kwh:null, kwh1:null, kwh2:null, orp_serum:null, orp_latex:null, flow:null };
@@ -327,7 +335,7 @@ const RPAD  = 50; // right padding for charts without a right axis — keeps X-a
 export default {
   name: 'KDExecutive',
   data() {
-    return { monthOffset:0, monthData:[], prevMonthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, budgetBaht:0, currentThemeKey:'slate', THEMES, showTbdCards:false, dataTimestamp:null, insOpen:false };
+    return { monthOffset:0, monthData:[], prevMonthData:[], annualData:[], prevAnnualData:[], annualYear: new Date().getFullYear(), viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, budgetBaht:0, currentThemeKey:'slate', THEMES, showTbdCards:false, dataTimestamp:null, insOpen:false };
   },
   watch: {
     costRate() {
@@ -427,6 +435,7 @@ export default {
       d.setMonth(d.getMonth() - this.monthOffset - 1);
       return d.toLocaleString('en', { month: 'short' });
     },
+    currentYear() { return new Date().getFullYear(); },
     kpiCards() {
       const s = this.stats, t = this.t, ps = this.prevStats;
       const prevLabel   = this.prevMonthLabel;
@@ -533,18 +542,64 @@ export default {
       const avgOrpL=aOrpL.length?Math.round(aOrpL.reduce((a,r)=>a+r.orp_latex,0)/aOrpL.length):null;
       return {totalFlow,kwhTotal,kwh1Total,kwh2Total,totalCost,serumTotal:d.reduce((a,r)=>a+r.serum,0),latexTotal:d.reduce((a,r)=>a+r.latex,0),avgOrpS,avgOrpL,months:d.length};
     },
+    prevAnnualStats() {
+      const curFilled = this.annualData.filter(r => r.flow!=null || r.serum!=null);
+      const alignN = this.annualYear === this.currentYear ? curFilled.length : 12;
+      const d = this.prevAnnualData
+        .slice(0, alignN)
+        .filter(r => r.flow!=null || r.serum!=null || r.latex!=null)
+        .map(r => ({ ...r, flow: r.flow ?? ((r.serum||0)+(r.latex||0)) }));
+      if (!d.length) return null;
+      const totalFlow = d.reduce((a,r)=>a+r.flow, 0);
+      const kwhTotal  = d.reduce((a,r)=>a+(r.kwh||0), 0);
+      const aOrpS = d.filter(r=>r.orp_serum!=null);
+      const aOrpL = d.filter(r=>r.orp_latex!=null);
+      const avgOrpS = aOrpS.length ? Math.round(aOrpS.reduce((a,r)=>a+r.orp_serum,0)/aOrpS.length) : null;
+      const avgOrpL = aOrpL.length ? Math.round(aOrpL.reduce((a,r)=>a+r.orp_latex,0)/aOrpL.length) : null;
+      const efficiency = kwhTotal ? totalFlow/kwhTotal : null;
+      const totalCost  = kwhTotal * this.costRate;
+      return { totalFlow, kwhTotal, avgOrpS, avgOrpL, efficiency, totalCost, months:d.length };
+    },
     annualKpiCards() {
-      const s=this.annualStats, t=this.t;
-      const eff = s.kwhTotal?(s.totalFlow/s.kwhTotal).toFixed(2):'—';
-      const orpOk=this.annualData.filter(r=>r.orp_serum!==null&&r.orp_serum>150&&r.orp_latex>150).length;
-      const orpAch=s.months?Math.round(orpOk/s.months*100):0;
+      const s=this.annualStats, t=this.t, ps=this.prevAnnualStats;
+      const prevLabel = String(this.annualYear - 1);
+      const effVal = s.kwhTotal ? s.totalFlow/s.kwhTotal : null;
+      const eff    = effVal!=null ? effVal.toFixed(2) : '—';
+      const orpOk  = this.annualData.filter(r=>r.orp_serum!=null&&r.orp_serum>150&&r.orp_latex>150).length;
+      const orpAch = s.months ? Math.round(orpOk/s.months*100) : 0;
+      const isPartial = this.annualYear===this.currentYear && s.months<12 && s.months>0;
+      const proj  = (val) => isPartial && val ? this.fmt0(Math.round(val/s.months*12)) : null;
+      const mom   = (cur, prev, hib) => this._momTag(cur, prev, hib);
+      const momNote = isPartial ? `(${s.months} เดือนแรก vs ${prevLabel})` : null;
+      const tc    = s.totalCost;
+      const costPerM3    = s.totalFlow ? tc/s.totalFlow : null;
+      const prevCostPerM3= ps && ps.totalFlow ? ps.totalCost/ps.totalFlow : null;
+      const prevOrpAvg   = ps && ps.avgOrpS!=null && ps.avgOrpL!=null ? (ps.avgOrpS+ps.avgOrpL)/2 : null;
+      const prevOrpAch   = prevOrpAvg!=null && s.months
+        ? Math.round(this.prevAnnualData.slice(0,s.months).filter(r=>r.orp_serum!=null&&r.orp_serum>150&&r.orp_latex>150).length/s.months*100)
+        : null;
       return [
-        { tag:'ANNUAL FLOW',       big:this.fmt0(s.totalFlow),   unit:'m³',   color:t.accent, chips:[{label:'Serum',val:this.fmt0(s.serumTotal),color:t.serum},{label:'Latex',val:this.fmt0(s.latexTotal),color:t.latex}] },
-        { tag:'ANNUAL ENERGY',     big:this.fmt0(s.kwhTotal),    unit:'kWh',  color:t.kwh,    chips:[{label:'TB-01',val:this.fmt0(s.kwh1Total),color:t.kwh},{label:'TB-02',val:this.fmt0(s.kwh2Total),color:t.cost}] },
-        { tag:'AVG EFFICIENCY',    big:eff,                       unit:'m³/kWh',color:t.perf,  chips:[], foot:'Annual Flow ÷ Energy' },
-        { tag:'EST. ANNUAL COST',  big:this.fmt0(s.totalCost),   unit:'฿',    color:t.cost,   chips:[], foot:`${s.months} months · ${this.costRate} ฿/kWh` },
-        { tag:'COST / m³',         big:s.totalFlow?(s.kwhTotal*this.costRate/s.totalFlow).toFixed(2):'—', unit:'฿/m³', color:t.hWarn, chips:[], foot:'Annual Energy Cost ÷ Total Flow' },
-        { tag:'ORP ACHIEVEMENT',   big:orpAch,                   unit:'%',    color:orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit, chips:[{label:'Serum avg',val:(s.avgOrpS??'—')+' mV',color:t.orpS},{label:'Latex avg',val:(s.avgOrpL??'—')+' mV',color:t.orpL}] },
+        { tag:'ANNUAL FLOW', big:this.fmt0(s.totalFlow), unit:'m³', color:t.accent,
+          chips:[{label:'Serum',val:this.fmt0(s.serumTotal),color:t.serum},{label:'Latex',val:this.fmt0(s.latexTotal),color:t.latex}],
+          mom:mom(s.totalFlow, ps?.totalFlow, true), momLabel:prevLabel, momNote,
+          proj:proj(s.totalFlow), projUnit:'m³' },
+        { tag:'ANNUAL ENERGY', big:this.fmt0(s.kwhTotal), unit:'kWh', color:t.kwh,
+          chips:[{label:'TB-01',val:this.fmt0(s.kwh1Total),color:t.kwh},{label:'TB-02',val:this.fmt0(s.kwh2Total),color:t.cost}],
+          mom:mom(s.kwhTotal, ps?.kwhTotal, false), momLabel:prevLabel, momNote,
+          proj:proj(s.kwhTotal), projUnit:'kWh' },
+        { tag:'AVG EFFICIENCY', big:eff, unit:'m³/kWh', color:t.perf,
+          chips:[], foot:'Annual Flow ÷ Energy',
+          mom:mom(effVal, ps?.efficiency, true), momLabel:prevLabel, momNote },
+        { tag:'EST. ANNUAL COST', big:this.fmt0(tc), unit:'฿', color:t.cost,
+          chips:[], foot:`${s.months} months · ${this.costRate} ฿/kWh`,
+          mom:mom(tc, ps?.totalCost, false), momLabel:prevLabel, momNote,
+          proj:proj(tc), projUnit:'฿' },
+        { tag:'COST / m³', big:costPerM3!=null?costPerM3.toFixed(2):'—', unit:'฿/m³', color:t.hWarn,
+          chips:[], foot:'Annual Energy Cost ÷ Total Flow',
+          mom:mom(costPerM3, prevCostPerM3, false), momLabel:prevLabel, momNote },
+        { tag:'ORP ACHIEVEMENT', big:orpAch, unit:'%', color:orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit,
+          chips:[{label:'Serum avg',val:(s.avgOrpS??'—')+' mV',color:t.orpS},{label:'Latex avg',val:(s.avgOrpL??'—')+' mV',color:t.orpL}],
+          mom:mom(orpAch, prevOrpAch, true), momLabel:prevLabel, momNote },
       ];
     },
     annualTreatPerfCards() {
@@ -628,9 +683,13 @@ export default {
       this.prevMonthData = rp.data && rp.data.length ? rp.data : genMonthData(1);
     } catch { this.prevMonthData = genMonthData(1); }
     try {
-      const res = await axios.get(`${API}/api/kd/history/monthly?year=${now.getFullYear()}`);
-      this.annualData = res.data && res.data.length ? res.data : genAnnualData();
-    } catch { this.annualData = genAnnualData(); }
+      const res = await axios.get(`${API}/api/kd/history/monthly?year=${this.annualYear}`);
+      this.annualData = res.data && res.data.length ? res.data : genAnnualData(this.annualYear);
+    } catch { this.annualData = genAnnualData(this.annualYear); }
+    try {
+      const rp = await axios.get(`${API}/api/kd/history/monthly?year=${this.annualYear - 1}`);
+      this.prevAnnualData = rp.data && rp.data.length ? rp.data : genAnnualData(this.annualYear - 1);
+    } catch { this.prevAnnualData = genAnnualData(this.annualYear - 1); }
     this.dataTimestamp = new Date();
     this.buildCharts();
   },
@@ -793,11 +852,31 @@ export default {
     async switchView(mode) {
       if (mode === 'annual') {
         try {
-          const res = await axios.get(`${API}/api/kd/history/monthly?year=${new Date().getFullYear()}`);
+          const res = await axios.get(`${API}/api/kd/history/monthly?year=${this.annualYear}`);
           if (res.data && res.data.length) this.annualData = res.data;
         } catch { /* keep existing annualData */ }
+        try {
+          const rp = await axios.get(`${API}/api/kd/history/monthly?year=${this.annualYear - 1}`);
+          this.prevAnnualData = rp.data && rp.data.length ? rp.data : genAnnualData(this.annualYear - 1);
+        } catch { /* keep existing prevAnnualData */ }
       }
       this.viewMode = mode;
+    },
+    async changeYear(dir) {
+      const minY = this.currentYear - 5;
+      const maxY = this.currentYear;
+      this.annualYear = Math.max(minY, Math.min(maxY, this.annualYear + dir));
+      try {
+        const res = await axios.get(`${API}/api/kd/history/monthly?year=${this.annualYear}`);
+        this.annualData = res.data && res.data.length ? res.data : genAnnualData(this.annualYear);
+      } catch { this.annualData = genAnnualData(this.annualYear); }
+      try {
+        const rp = await axios.get(`${API}/api/kd/history/monthly?year=${this.annualYear - 1}`);
+        this.prevAnnualData = rp.data && rp.data.length ? rp.data : genAnnualData(this.annualYear - 1);
+      } catch { this.prevAnnualData = genAnnualData(this.annualYear - 1); }
+      this.dataTimestamp = new Date();
+      this.destroyCharts();
+      this.$nextTick(() => this.buildAnnualCharts());
     },
     getAnnualChartData() {
       const d=this.annualData, rate=parseFloat(this.costRate)||4.5;
