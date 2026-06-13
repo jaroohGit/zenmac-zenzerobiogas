@@ -7,6 +7,17 @@
     </div>
     <ProhibitStatusBar />
 
+    <!-- Active mode indicator + disable button -->
+    <div v-if="prohibitStore.currentMode" class="kd-mode-bar">
+      <span class="kd-mode-bar-label">● {{ prohibitStore.currentMode.replace(/_/g, '-') }} ACTIVE</span>
+      <button class="kd-mode-bar-disable"
+              @click="disableMode(prohibitStore.currentMode)"
+              :disabled="loadingBtns['DISABLE_' + prohibitStore.currentMode]">
+        <span v-if="loadingBtns['DISABLE_' + prohibitStore.currentMode]" class="btn-spin"></span>
+        <template v-else>✕ DISABLE MODE</template>
+      </button>
+    </div>
+
     <!-- Control Tabs -->
     <div class="kd-tab-bar">
       <button v-for="t in tabs" :key="t.id" class="kd-tab-btn"
@@ -32,7 +43,10 @@
           <div class="kd-set-right"><input v-model.number="proc.orpLo" class="kd-num-input" type="number" /><span class="kd-num-unit">mV</span></div>
         </div>
         <div class="kd-info-box kd-info-cyan">Current: {{ processORP }} mV &nbsp;|&nbsp; Target: {{ proc.orpTarget }} mV</div>
-        <button class="kd-save-btn kd-save-cyan" @click="saveProc">SAVE PROCESS SETTINGS</button>
+        <button class="kd-save-btn kd-save-cyan" @click="saveOrpBands('1')" :disabled="loadingBtns['ORP_1']">
+          <span v-if="loadingBtns['ORP_1']" class="btn-spin"></span>
+          <template v-else>SAVE PROCESS SETTINGS</template>
+        </button>
       </div>
 
       <div class="kd-ctrl-card">
@@ -50,7 +64,10 @@
           <div class="kd-set-right"><input v-model.number="serum.orpLo" class="kd-num-input" type="number" /><span class="kd-num-unit">mV</span></div>
         </div>
         <div class="kd-info-box kd-info-green">Current: {{ serumORP }} mV &nbsp;|&nbsp; Target: {{ serum.orpTarget }} mV</div>
-        <button class="kd-save-btn kd-save-green" @click="saveSerum">SAVE SERUM SETTINGS</button>
+        <button class="kd-save-btn kd-save-green" @click="saveOrpBands('2')" :disabled="loadingBtns['ORP_2']">
+          <span v-if="loadingBtns['ORP_2']" class="btn-spin"></span>
+          <template v-else>SAVE SERUM SETTINGS</template>
+        </button>
       </div>
     </div>
 
@@ -73,7 +90,10 @@
         <div><div class="kd-set-label">Max Blower Speed</div><div class="kd-set-sub">Maximum blower setpoint</div></div>
         <div class="kd-set-right"><input v-model.number="loop.maxSpeed" class="kd-num-input amber" type="number" /><span class="kd-num-unit">%</span></div>
       </div>
-      <button class="kd-save-btn kd-save-cyan" @click="saveLoop">SAVE LOOP SETTINGS</button>
+      <button class="kd-save-btn kd-save-cyan" @click="enableLoopControl('1')" :disabled="loadingBtns['LOOP_1']">
+        <span v-if="loadingBtns['LOOP_1']" class="btn-spin"></span>
+        <template v-else>SAVE LOOP SETTINGS</template>
+      </button>
     </div>
 
     <!-- ══ TAB 3: TURNING POINTS ══ -->
@@ -216,7 +236,10 @@
           </div>
         </div>
 
-        <button class="kd-save-btn kd-save-cyan" @click="saveTurning">SAVE LOOP PARAMETERS</button>
+        <button class="kd-save-btn kd-save-cyan" @click="applyTurningPoint" :disabled="loadingBtns['TURNING']">
+          <span v-if="loadingBtns['TURNING']" class="btn-spin"></span>
+          <template v-else>SAVE LOOP PARAMETERS</template>
+        </button>
       </div>
 
     </div><!-- /turning tab -->
@@ -318,8 +341,9 @@
                 AIRFLOW-ORP MODE {{ arpActive1 ? 'ACTIVE' : 'INACTIVE' }}
               </span>
             </label>
-            <button class="arp-save-btn" @click="saveArp(1)">
-              <i class="bx bx-save"></i> SAVE BL-1
+            <button class="arp-save-btn" @click="enableAirflowORP('1')" :disabled="loadingBtns['ARP_1']">
+              <span v-if="loadingBtns['ARP_1']" class="btn-spin"></span>
+              <template v-else><i class="bx bx-save"></i> SAVE BL-1</template>
             </button>
           </div>
         </div>
@@ -407,8 +431,9 @@
                 AIRFLOW-ORP MODE {{ arpActive2 ? 'ACTIVE' : 'INACTIVE' }}
               </span>
             </label>
-            <button class="arp-save-btn" @click="saveArp(2)">
-              <i class="bx bx-save"></i> SAVE BL-2
+            <button class="arp-save-btn" @click="enableAirflowORP('2')" :disabled="loadingBtns['ARP_2']">
+              <span v-if="loadingBtns['ARP_2']" class="btn-spin"></span>
+              <template v-else><i class="bx bx-save"></i> SAVE BL-2</template>
             </button>
           </div>
         </div>
@@ -421,6 +446,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import { useProhibit } from '@/composables/useProhibit';
 
 const DEFAULT_BANDS = () => [
   { zone:'HH', color:'#dd4444', orp_lo:150,  orp_hi:999,  flow_cmm:20.0 },
@@ -432,6 +458,12 @@ const DEFAULT_BANDS = () => [
 
 export default {
   name: 'StaKdControl',
+
+  setup() {
+    const { guardedAction, store } = useProhibit();
+    return { guardedAction, prohibitStore: store };
+  },
+
   data() {
     return {
       activeTab: 'orp',
@@ -464,6 +496,7 @@ export default {
       arpActive2: true,
       arpBandsSerum: DEFAULT_BANDS(),
       arpBandsLatex: DEFAULT_BANDS(),
+      loadingBtns:   {},
     };
   },
   computed: {
@@ -507,10 +540,80 @@ export default {
     offPeak: { deep: true, handler() { if (this.activeTab === 'turning') this.$nextTick(this.drawLoopChart); } },
   },
   methods: {
-    saveProc()    { alert('Process ORP settings saved (integration pending)'); },
-    saveSerum()   { alert('Serum ORP settings saved (integration pending)'); },
-    saveLoop()    { alert('Loop control settings saved (integration pending)'); },
-    saveTurning() { alert('Loop parameters saved (integration pending)'); },
+    // ── Guarded control actions ───────────────────────────────────────────
+    saveOrpBands(blower) {
+      this.guardedAction('SAVE_ORP_BANDS', 'AUTO_MODE', () => {
+        this._startLoading('ORP_' + blower);
+        this.prohibitStore.setMode('ORP_BANDS');
+        const settings = blower === '1' ? { ...this.proc } : { ...this.serum };
+        const payload = { target: 'BL-' + blower, ...settings, _meta: this._mqttMeta() };
+        console.log('[MQTT] kd:orp-bands:set', payload);
+      }, { cooldownMs: 10000, conflictModes: ['LOOP_CONTROL', 'TURNING_POINTS'], target: 'BL-' + blower });
+    },
+
+    enableLoopControl(blower) {
+      this.guardedAction('ENABLE_LOOP', 'AUTO_MODE', () => {
+        this._startLoading('LOOP_' + blower);
+        this.prohibitStore.setMode('LOOP_CONTROL');
+        const payload = { target: 'BL-' + blower, ...this.loop, _meta: this._mqttMeta() };
+        console.log('[MQTT] kd:loop-control:enable', payload);
+      }, { cooldownMs: 5000, conflictModes: ['AIRFLOW_ORP', 'TURNING_POINTS'], target: 'BL-' + blower });
+    },
+
+    applyTurningPoint() {
+      this.guardedAction('APPLY_TURNING_POINT', 'AUTO_MODE', () => {
+        this._startLoading('TURNING');
+        this.prohibitStore.setMode('TURNING_POINTS');
+        const params = this.loopTab === 'on-peak' ? { ...this.onPeak } : { ...this.offPeak };
+        const payload = { schedule: this.loopTab, params, _meta: this._mqttMeta() };
+        console.log('[MQTT] kd:turning-points:apply', payload);
+      }, { cooldownMs: 15000, conflictModes: ['AIRFLOW_ORP', 'LOOP_CONTROL'] });
+    },
+
+    enableAirflowORP(blower) {
+      this.guardedAction('ENABLE_AIRFLOW_ORP', 'AUTO_MODE', () => {
+        this._startLoading('ARP_' + blower);
+        this.prohibitStore.setMode('AIRFLOW_ORP');
+        const bands  = blower === '1' ? this.arpBandsSerum : this.arpBandsLatex;
+        const active = blower === '1' ? this.arpActive1    : this.arpActive2;
+        const payload = {
+          target: 'BL-' + blower, enabled: active,
+          bands: bands.map(b => ({ ...b })),
+          _meta: this._mqttMeta(),
+        };
+        console.log('[MQTT] kd:airflow-orp:enable', payload);
+      }, { cooldownMs: 5000, conflictModes: ['LOOP_CONTROL', 'TURNING_POINTS'], target: 'BL-' + blower });
+    },
+
+    disableMode(mode) {
+      this.guardedAction('DISABLE_MODE', 'AUTO_MODE', () => {
+        this._startLoading('DISABLE_' + mode);
+        this.prohibitStore.clearMode(mode);
+        const payload = { mode, _meta: this._mqttMeta() };
+        console.log('[MQTT] kd:mode:disable', payload);
+      }, { cooldownMs: 2000, target: mode });
+    },
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    _mqttMeta() {
+      return {
+        source:          'web',
+        token:           null,
+        ts:              Date.now(),
+        op_id:           this._nanoid(),
+        prohibit_check:  'PASSED',
+      };
+    },
+    _nanoid(len) {
+      var n = len || 8;
+      return Math.random().toString(36).slice(2, 2 + n).padEnd(n, '0');
+    },
+    _startLoading(key, ms) {
+      var delay = ms || 500;
+      this.loadingBtns[key] = true;
+      setTimeout(() => { this.loadingBtns[key] = false; }, delay);
+    },
+
     drawLoopChart() {
       const canvas = this.$refs.loopCanvas;
       if (!canvas) return;
@@ -632,10 +735,7 @@ export default {
         { t: t5, v: orpHi * frac },
       ], 'rgba(68,204,136,.55)', 2);
     },
-    saveArp(n) {
-      const label = n === 1 ? 'BL-1 Serum' : 'BL-2 Latex';
-      alert(`AIRFLOW-ORP MODE — ${label} settings saved (integration pending)`);
-    },
+    saveArp(n) { this.enableAirflowORP(String(n)); },
     activeBandColor(idx, side) {
       const bands = side === 'serum' ? this.arpBandsSerum : this.arpBandsLatex;
       return bands[idx]?.color || '#888';
@@ -1034,4 +1134,40 @@ export default {
   background: rgba(0,212,255,.16); border-color: rgba(0,212,255,.48);
   box-shadow: 0 0 14px rgba(0,212,255,.18), 0 2px 8px rgba(0,0,0,.22);
 }
+.arp-save-btn:disabled,
+.kd-save-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ── Button loading spinner ── */
+.btn-spin {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border: 2px solid rgba(255,255,255,.25);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: btn-spin 0.5s linear infinite;
+  vertical-align: middle;
+}
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
+/* ── Active mode bar ── */
+.kd-mode-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 14px;
+  background: rgba(0,200,170,.07);
+  border: 1px solid rgba(0,200,170,.25);
+  border-radius: 8px;
+}
+.kd-mode-bar-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: #00c8aa; letter-spacing: .07em;
+}
+.kd-mode-bar-disable {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 5px 12px; border-radius: 5px; cursor: pointer;
+  background: rgba(255,64,64,.1); color: #ff4040;
+  border: 1px solid rgba(255,64,64,.3); transition: all .15s;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.kd-mode-bar-disable:hover { background: rgba(255,64,64,.18); }
+.kd-mode-bar-disable:disabled { opacity: .5; cursor: not-allowed; }
 </style>
