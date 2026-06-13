@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from "./router";
 import AOS from 'aos';
@@ -47,6 +48,7 @@ AOS.init({
 });
 
 createApp(App)
+    .use(createPinia())
     .use(store)
     .use(router)
     .use(VueApexCharts)
