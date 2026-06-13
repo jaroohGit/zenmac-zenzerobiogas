@@ -28,6 +28,16 @@
           :style="`--ta:${th.accent}`"
         ></button>
       </div>
+
+      <!-- Data freshness (Executive only — replaces OFFLINE badge) -->
+      <span class="data-ts" v-if="dataTimestampStr">
+        <i class="bx bx-time-five"></i> ข้อมูล ณ {{ dataTimestampStr }}
+      </span>
+
+      <!-- Export / Print PDF -->
+      <button class="export-btn" @click="exportPrint" title="Print / Export PDF">
+        <i class="bx bx-printer"></i> PDF
+      </button>
     </div>
 
     <!-- ── KPI GRID 6 cards ── -->
@@ -146,21 +156,23 @@
           <div class="chart-wrap"><canvas ref="chartORP"></canvas></div>
         </div>
 
-        <!-- TBD slots -->
-        <div class="chart-card chart-tbd">
-          <div class="tbd-inner">
-            <i class="bx bx-bar-chart-alt-2 tbd-icon"></i>
-            <div class="tbd-label">กำลังออกแบบ</div>
-            <div class="tbd-sub">Coming soon</div>
+        <!-- TBD slots — set showTbdCards:true in data() to reveal -->
+        <template v-if="showTbdCards">
+          <div class="chart-card chart-tbd">
+            <div class="tbd-inner">
+              <i class="bx bx-bar-chart-alt-2 tbd-icon"></i>
+              <div class="tbd-label">กำลังออกแบบ</div>
+              <div class="tbd-sub">Coming soon</div>
+            </div>
           </div>
-        </div>
-        <div class="chart-card chart-tbd">
-          <div class="tbd-inner">
-            <i class="bx bx-line-chart tbd-icon"></i>
-            <div class="tbd-label">กำลังออกแบบ</div>
-            <div class="tbd-sub">Coming soon</div>
+          <div class="chart-card chart-tbd">
+            <div class="tbd-inner">
+              <i class="bx bx-line-chart tbd-icon"></i>
+              <div class="tbd-label">กำลังออกแบบ</div>
+              <div class="tbd-sub">Coming soon</div>
+            </div>
           </div>
-        </div>
+        </template>
 
       </div>
 
@@ -298,7 +310,7 @@ const RPAD  = 50; // right padding for charts without a right axis — keeps X-a
 export default {
   name: 'KDExecutive',
   data() {
-    return { monthOffset:0, monthData:[], prevMonthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, budgetBaht:0, currentThemeKey:'slate', THEMES };
+    return { monthOffset:0, monthData:[], prevMonthData:[], annualData:[], viewMode:'monthly', costRate:4.50, threshEff:1.5, threshORP:150, budgetBaht:0, currentThemeKey:'slate', THEMES, showTbdCards:false, dataTimestamp:null };
   },
   watch: {
     costRate() {
@@ -550,6 +562,13 @@ export default {
     insights() {
       return this.viewMode==='annual' ? this._annualInsights() : this._monthlyInsights();
     },
+    dataTimestampStr() {
+      if (!this.dataTimestamp) return null;
+      const d = this.dataTimestamp;
+      const hhmm = d.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+      const ddmm  = d.toLocaleDateString('th-TH', { day:'numeric', month:'short' });
+      return `${ddmm} ${hhmm} น.`;
+    },
   },
   async mounted() {
     this._chartMain=null; this._chartORP=null; this._chartPerf=null; this._chartBlower=null;
@@ -570,6 +589,7 @@ export default {
       const res = await axios.get(`${API}/api/kd/history/monthly?year=${now.getFullYear()}`);
       this.annualData = res.data && res.data.length ? res.data : genAnnualData();
     } catch { this.annualData = genAnnualData(); }
+    this.dataTimestamp = new Date();
     this.buildCharts();
   },
   beforeUnmount(){ this.destroyCharts(); },
@@ -678,6 +698,7 @@ export default {
       this._chartMain=this._chartORP=this._chartPerf=this._chartBlower=null;
     },
     switchTheme(key) { this.currentThemeKey=key; },
+    exportPrint() { window.print(); },
     async changeMonth(dir) {
       this.monthOffset=Math.max(0,Math.min(5,this.monthOffset+dir));
       const d = new Date(); d.setMonth(d.getMonth()-this.monthOffset);
@@ -692,6 +713,7 @@ export default {
         const rp = await axios.get(`${API}/api/kd/history/daily?month=${ymp}`);
         this.prevMonthData = rp.data && rp.data.length ? rp.data : genMonthData(this.monthOffset+1);
       } catch { this.prevMonthData = genMonthData(this.monthOffset+1); }
+      this.dataTimestamp = new Date();
       [this._chartPerf,this._chartBlower,this._chartORP,this._chartMain].forEach(c=>c?.destroy());
       this._chartMain=this._chartORP=this._chartPerf=this._chartBlower=null;
       this.$nextTick(()=>this.buildMonthlyCharts());
@@ -915,7 +937,7 @@ export default {
 
 /* ── Monthly body: charts ── */
 .monthly-body   { flex:1; min-height:0; display:flex; gap:7px; }
-.monthly-charts  { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:repeat(3,1fr); gap:5px; }
+.monthly-charts  { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; gap:5px; }
 
 /* TBD placeholder */
 .chart-tbd { border-style:dashed !important; border-color:rgba(255,255,255,.07) !important; }
@@ -1143,4 +1165,56 @@ export default {
 }
 .ins-budget-input:focus { border-color:var(--ex-accent); }
 .ins-budget-input::placeholder { opacity:.35; }
+
+/* ── Data timestamp badge (Executive only) ── */
+.data-ts {
+  font-size:9px; font-weight:600; letter-spacing:.04em;
+  color:var(--ex-text-sub); display:flex; align-items:center; gap:4px;
+  white-space:nowrap; flex-shrink:0; margin-left:auto;
+}
+.data-ts i { font-size:11px; opacity:.7; }
+
+/* ── Export / Print PDF button ── */
+.export-btn {
+  display:flex; align-items:center; gap:5px; padding:4px 10px;
+  border-radius:5px; border:1px solid var(--ex-mn-bdr); background:var(--ex-mn-bg);
+  color:var(--ex-mn-color); cursor:pointer; font-size:10px; font-weight:700;
+  letter-spacing:.06em; transition:all .15s; white-space:nowrap; flex-shrink:0;
+}
+.export-btn:hover { background:var(--ex-mn-hbg); color:var(--ex-mn-hclr); border-color:var(--ex-accent); }
+.export-btn i { font-size:13px; }
+
+/* ── Print / PDF export ── */
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+
+  .exec-wrap {
+    height: auto !important; overflow: visible !important;
+    background: #f2f4f7 !important; padding: 6px !important; gap: 5px !important;
+  }
+  .view-toggle, .month-nav, .theme-sw, .export-btn,
+  .ctrl-group, .ins-budget { display:none !important; }
+
+  .exec-acc-dot { background:#2a7fa8 !important; box-shadow:none !important; }
+  .exec-heading { color:#1a2a3a !important; }
+  .data-ts { color:#446 !important; margin-left:10px !important; }
+
+  .kpi-grid { background:#ccc !important; }
+  .kpi-card { background:#fff !important; break-inside:avoid; }
+  .kpi-big  { font-size:20px !important; }
+  .kpi-chip { background:#eee !important; border-color:#bbb !important; color:#333 !important; }
+  .kpi-tag, .kpi-foot, .kpi-mom-vs { color:#555 !important; }
+
+  .ins-bar { background:#e8edf2 !important; border-radius:6px; padding:5px 8px !important; }
+  .ic-good    { background:#e6f9ef !important; border-color:#6ecf9a !important; color:#1a7a45 !important; }
+  .ic-warning { background:#fef8e7 !important; border-color:#c4a040 !important; color:#7a5c00 !important; }
+  .ic-crit    { background:#fdecea !important; border-color:#c47070 !important; color:#8a2020 !important; }
+  .ic-info    { background:#e8f4fb !important; border-color:#4a9eba !important; color:#1a5c7a !important; }
+
+  .monthly-body { height:auto !important; overflow:visible !important; }
+  .tp-col { display:none !important; }
+  .monthly-charts { height:480px; grid-template-columns:1fr 1fr !important; }
+  .chart-card { background:#fff !important; border-color:#ddd !important; break-inside:avoid; }
+  .chart-hdr { color:#222 !important; }
+}
 </style>
