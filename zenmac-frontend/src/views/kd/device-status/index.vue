@@ -332,12 +332,13 @@ export default {
   },
 
   mounted() {
-    this._noDataTs   = {};
-    this._rangeTs    = {};
-    this._rdTimer    = null;
-    this._checkTimer = null;
-    this.tickClockTimer  = null;
-    this._unsubFns   = [];
+    this._noDataTs        = {};
+    this._rangeTs         = {};
+    this._rdTimer         = null;
+    this._checkTimer      = null;
+    this.tickClockTimer   = null;
+    this._unsubFns        = [];
+    this._mqttConnectedAt = null;
 
     // init registry with runtime state
     this.registry = DEFAULT_DEVICES.map(d => ({
@@ -345,17 +346,21 @@ export default {
     }));
 
     this._loadLog();
-    getSocket();
+    const sock = getSocket();
 
     const u1 = on('kd:update',    this._onUpdate);
     const u2 = on('kd:status',    this._onMqttStatus);
     const u3 = on('ws:disconnect', this._onDisconnect);
     const u4 = on('rawmqtt',      this._onRaw);
     const u5 = on('kd:snapshot',  this._onSnapshot);
-    this._unsubFns = [u1, u2, u3, u4, u5];
+    const u6 = on('ws:connect',   this._onWsConnect);
+    this._unsubFns = [u1, u2, u3, u4, u5, u6];
 
-    this._checkTimer = setInterval(this._checkOffline, 10000);
-    this.tickClockTimer  = setInterval(() => { this.tickClock++; }, 5000);
+    // request snapshot immediately if already connected
+    if (sock.connected) this._requestSnapshot();
+
+    this._checkTimer    = setInterval(this._checkOffline, 10000);
+    this.tickClockTimer = setInterval(() => { this.tickClock++; }, 5000);
   },
 
   beforeUnmount() {
@@ -366,6 +371,16 @@ export default {
   },
 
   methods: {
+    // ── snapshot request ─────────────────────────────────────────
+    _requestSnapshot() {
+      this._mqttConnectedAt = Date.now();
+      getSocket().emit('request:snapshot');
+    },
+
+    _onWsConnect() {
+      this._requestSnapshot();
+    },
+
     // ── socket handlers ─────────────────────────────────────────
     _onUpdate({ key, data }) {
       if (!key || !data) return;
@@ -432,7 +447,16 @@ export default {
     _checkOffline() {
       const now = Date.now();
       let changed = false;
+      const connectedMs = this._mqttConnectedAt ? now - this._mqttConnectedAt : 0;
+
       this.registry.forEach(d => {
+        // UNKNOWN → OFFLINE after 30s of MQTT connected with no data
+        if (d.status === 'unknown' && this.mqttConnected && connectedMs > 30000) {
+          d.status = 'offline';
+          changed = true;
+          return;
+        }
+
         if (!d.lastSeen) return;
 
         if (now - d.lastSeen > OFFLINE_MS && d.status === 'online') {
