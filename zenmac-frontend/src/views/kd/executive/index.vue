@@ -49,8 +49,9 @@
           <span class="kpi-unit-b" :style="`color:${k.color}`">{{ k.unit }}</span>
         </div>
         <div class="kpi-mom" v-if="k.mom" :style="`color:${k.mom.color}`">
-          {{ k.mom.arrow }} {{ k.mom.pct }}%<span class="kpi-mom-vs"> vs {{ k.momLabel }}</span>
+          {{ k.mom.arrow }} {{ k.mom.pct }}%<span class="kpi-mom-vs" v-if="!k.momNote"> vs {{ k.momLabel }}</span>
         </div>
+        <div class="kpi-mom-note" v-if="k.momNote">{{ k.momNote }}</div>
         <div class="kpi-proj" v-if="k.proj">คาด ~{{ k.proj }} {{ k.projUnit }}</div>
         <div class="kpi-chips" v-if="k.chips && k.chips.length">
           <span class="kpi-chip" v-for="c in k.chips" :key="c.label" :style="`color:${c.color}`">{{ c.label }}: {{ c.val }}</span>
@@ -388,7 +389,12 @@ export default {
       return {totalFlow,serumTotal,latexTotal,kwhTotal,kwh1Total,kwh2Total,avgORPSerum,avgORPLatex,efficiency,totalCost,bestDay:best};
     },
     prevStats() {
-      const d = this.prevMonthData.filter(r => r.flow!=null || (r.serum!=null && r.kwh!=null));
+      // Align to same elapsed days as current month for fair apples-to-apples MoM
+      const curFilled = this.monthData.filter(r => r.flow!=null || (r.serum!=null && r.kwh!=null));
+      const alignN    = curFilled.length;
+      if (!alignN) return null;
+      const d = this.prevMonthData.slice(0, alignN)
+        .filter(r => r.flow!=null || (r.serum!=null && r.kwh!=null));
       if (!d.length) return null;
       const totalFlow  = d.reduce((a,r) => a + (r.flow ?? ((r.serum||0)+(r.latex||0))), 0);
       const kwhTotal   = d.reduce((a,r) => a + (r.kwh||0), 0);
@@ -411,8 +417,10 @@ export default {
       const daysInMonth = this.monthData.length;
       const dataCount   = this.monthData.filter(r => r.flow!=null).length;
       const showProj    = this.monthOffset===0 && dataCount>0 && dataCount<daysInMonth;
+      const isPartial   = this.monthOffset===0 && dataCount>0 && dataCount<daysInMonth;
       const proj  = (val) => showProj && val ? this.fmt0(Math.round(val/dataCount*daysInMonth)) : null;
       const mom   = (cur, prev, hib) => this._momTag(cur, prev, hib);
+      const momN  = isPartial ? `(${dataCount} วันแรก vs ${prevLabel})` : null;
       const tc    = parseInt(s.totalCost) || 0;
       const costD = this.fmt0(dataCount ? Math.round(tc/dataCount) : 0);
       const orpAvg = parseInt(s.avgORPSerum) + parseInt(s.avgORPLatex);
@@ -425,35 +433,35 @@ export default {
         {
           tag:'TOTAL FLOW', big:this.fmt0(s.totalFlow), unit:'m³', color:t.accent,
           chips:[{label:'Serum',val:this.fmt0(s.serumTotal),color:t.serum},{label:'Latex',val:this.fmt0(s.latexTotal),color:t.latex}],
-          mom:mom(s.totalFlow, ps?.totalFlow, true), momLabel:prevLabel,
+          mom:mom(s.totalFlow, ps?.totalFlow, true), momLabel:prevLabel, momNote:momN,
           proj:proj(s.totalFlow), projUnit:'m³',
         },
         {
           tag:'TOTAL ENERGY', big:this.fmt0(s.kwhTotal), unit:'kWh', color:t.kwh,
           chips:[{label:'TB-01',val:this.fmt0(s.kwh1Total),color:t.kwh},{label:'TB-02',val:this.fmt0(s.kwh2Total),color:t.cost}],
-          mom:mom(s.kwhTotal, ps?.kwhTotal, false), momLabel:prevLabel,
+          mom:mom(s.kwhTotal, ps?.kwhTotal, false), momLabel:prevLabel, momNote:momN,
           proj:proj(s.kwhTotal), projUnit:'kWh',
         },
         {
           tag:'PERFORMANCE', big:s.efficiency, unit:'m³/kWh', color:t.perf,
           foot:'Flow ÷ Energy — Higher is Better',
-          mom:mom(parseFloat(s.efficiency), ps?.efficiency, true), momLabel:prevLabel,
+          mom:mom(parseFloat(s.efficiency), ps?.efficiency, true), momLabel:prevLabel, momNote:momN,
         },
         {
           tag:'EST. ENERGY COST', big:this.fmt0(s.totalCost), unit:'฿', color:t.cost,
           foot:`${this.fmt0(tc)} ฿/month  ·  ${costD} ฿/day avg`,
-          mom:mom(tc, ps?.totalCost, false), momLabel:prevLabel,
+          mom:mom(tc, ps?.totalCost, false), momLabel:prevLabel, momNote:momN,
           proj:proj(tc), projUnit:'฿',
         },
         {
           tag:'COST / m³', big:costPerM3!=null?costPerM3.toFixed(2):'—', unit:'฿/m³', color:t.hWarn,
           foot:'Energy Cost ÷ Total Flow',
-          mom:mom(costPerM3, prevCostPerM3, false), momLabel:prevLabel,
+          mom:mom(costPerM3, prevCostPerM3, false), momLabel:prevLabel, momNote:momN,
         },
         {
           tag:'ORP AVERAGE', big:orpCombined, unit:'mV', color:t.orpS,
           chips:[{label:'Serum',val:`${s.avgORPSerum} mV`,color:t.orpS},{label:'Latex',val:`${s.avgORPLatex} mV`,color:t.orpL}],
-          mom:mom(typeof orpCombined==='number'?orpCombined:null, prevOrpAvg, true), momLabel:prevLabel,
+          mom:mom(typeof orpCombined==='number'?orpCombined:null, prevOrpAvg, true), momLabel:prevLabel, momNote:momN,
         },
       ];
     },
@@ -927,6 +935,7 @@ export default {
 .kpi-unit-b { font-size:11px; font-weight:600; }
 .kpi-mom { font-size:10px; font-weight:700; display:flex; align-items:center; gap:2px; }
 .kpi-mom-vs { font-size:8px; font-weight:500; opacity:.6; }
+.kpi-mom-note { font-size:8px; color:var(--ex-text-sub); opacity:.65; font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .kpi-proj { font-size:8px; color:var(--ex-text-sub); opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .kpi-chips { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
 .kpi-chip { font-family:'JetBrains Mono',monospace; font-size:8px; padding:1px 6px; border-radius:3px; background:var(--ex-tag-bg); border:1px solid var(--ex-tag-bdr); white-space:nowrap; }
