@@ -41,11 +41,11 @@ export default {
   data() {
     return {
       toasts: [],
-      _timers: {},
     };
   },
 
   mounted() {
+    this._timers = {};
     this._handler = (e) => this.push(e.detail);
     window.addEventListener('prohibit-block', this._handler);
   },

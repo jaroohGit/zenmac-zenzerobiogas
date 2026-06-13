@@ -285,7 +285,7 @@ export default {
     },
 
     filteredDevices() {
-      void this._tick;
+      void this.tickClock;
       const errDevs = this.errDevSet;
       const q = this.devSearch.toLowerCase();
       let list = this.registry.filter(d => {
@@ -327,17 +327,18 @@ export default {
       devSearch:     '',
       lightTheme:    false,
       refreshing:    false,
-      _noDataTs:     {},
-      _rangeTs:      {},
-      _rdTimer:      null,
-      _checkTimer:   null,
-      _tickTimer:    null,
-      _unsubFns:     [],
-      _tick:         0,
+      tickClock:     0,
     };
   },
 
   mounted() {
+    this._noDataTs   = {};
+    this._rangeTs    = {};
+    this._rdTimer    = null;
+    this._checkTimer = null;
+    this.tickClockTimer  = null;
+    this._unsubFns   = [];
+
     // init registry with runtime state
     this.registry = DEFAULT_DEVICES.map(d => ({
       ...d, status:'unknown', lastSeen:null, lastVal:'—', msgCount:0, errCount:0,
@@ -354,13 +355,13 @@ export default {
     this._unsubFns = [u1, u2, u3, u4, u5];
 
     this._checkTimer = setInterval(this._checkOffline, 10000);
-    this._tickTimer  = setInterval(() => { this._tick++; }, 5000);
+    this.tickClockTimer  = setInterval(() => { this.tickClock++; }, 5000);
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     this._unsubFns.forEach(fn => fn());
     clearInterval(this._checkTimer);
-    clearInterval(this._tickTimer);
+    clearInterval(this.tickClockTimer);
     clearTimeout(this._rdTimer);
   },
 
@@ -441,7 +442,7 @@ export default {
           });
         }
       });
-      if (changed) this._tick++;
+      if (changed) this.tickClock++;
     },
 
     _validateRange(d, num) {
@@ -490,7 +491,7 @@ export default {
     },
 
     _saveLog() {
-      try { localStorage.setItem(LS_KEY, JSON.stringify(this.errorLog)); } catch {}
+      try { localStorage.setItem(LS_KEY, JSON.stringify(this.errorLog)); } catch (_e) { /* quota exceeded — ignore */ }
     },
 
     // ── error actions ────────────────────────────────────────────
@@ -533,7 +534,7 @@ export default {
           this.$set(d, 'msgCount', (d.msgCount||0) + 5);
         }
       });
-      this._tick++;
+      this.tickClock++;
     },
 
     // ── export ───────────────────────────────────────────────────

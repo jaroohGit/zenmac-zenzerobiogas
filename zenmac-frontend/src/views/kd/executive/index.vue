@@ -490,14 +490,17 @@ export default {
       const effMeter  = Math.min(100,Math.round(effVal/2.0*100));
       const costMeter = Math.max(0,Math.min(100,Math.round((1-costVal/15)*100)));
       const effColor  = effMeter>=100?t.hOk:effMeter>=60?t.hWarn:t.hCrit;
+      // eslint-disable-next-line no-unused-vars
       const costColor = costMeter>=60?t.hOk:costMeter>=30?t.hWarn:t.hCrit;
       const orpOk     = d.filter(r=>r.orp_serum>150&&r.orp_latex>150).length;
       const orpAch    = Math.round(orpOk/d.length*100);
       const orpColor  = orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit;
       const avgOrpS   = parseFloat(s.avgORPSerum) || 0;
       const kwoSVal   = avgOrpS ? s.kwhTotal / avgOrpS : null;
+      // eslint-disable-next-line no-unused-vars
       const kwoS      = kwoSVal !== null ? kwoSVal.toFixed(2) : '—';
       const kwoSMeter = kwoSVal !== null ? Math.max(0,Math.min(100,Math.round((1-kwoSVal/15)*100))) : 0;
+      // eslint-disable-next-line no-unused-vars
       const kwoSColor = kwoSMeter>=70?t.hOk:kwoSMeter>=40?t.hWarn:t.hCrit;
       // Most recent missed ORP days (top 3, desc)
       const missedRows = this.monthData
@@ -553,13 +556,16 @@ export default {
       const effMeter  = Math.min(100,Math.round(effVal/2.0*100));
       const costMeter = Math.max(0,Math.min(100,Math.round((1-costVal/15)*100)));
       const effColor  = effMeter>=100?t.hOk:effMeter>=60?t.hWarn:t.hCrit;
+      // eslint-disable-next-line no-unused-vars
       const costColor = costMeter>=60?t.hOk:costMeter>=30?t.hWarn:t.hCrit;
       const orpOk=d.filter(r=>r.orp_serum>150&&r.orp_latex>150).length;
       const orpAch=Math.round(orpOk/d.length*100);
       const orpColor=orpAch>=70?t.hOk:orpAch>=40?t.hWarn:t.hCrit;
       const kwoSVal   = s.avgOrpS ? s.kwhTotal / s.avgOrpS : null;
+      // eslint-disable-next-line no-unused-vars
       const kwoS      = kwoSVal !== null ? kwoSVal.toFixed(2) : '—';
       const kwoSMeter = kwoSVal !== null ? Math.max(0,Math.min(100,Math.round((1-kwoSVal/15)*100))) : 0;
+      // eslint-disable-next-line no-unused-vars
       const kwoSColor = kwoSMeter>=70?t.hOk:kwoSMeter>=40?t.hWarn:t.hCrit;
       return [
         { tag:'ANNUAL EFFICIENCY', big:effVal.toFixed(2),  unit:'m³/kWh', color:effColor,  foot:'Annual Flow ÷ Energy', meter:effMeter,  meterColor:effColor,  status:effMeter>=100?'OPTIMAL':effMeter>=60?'MODERATE':'NEEDS WORK' },
