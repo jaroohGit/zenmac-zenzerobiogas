@@ -108,6 +108,9 @@
             <div class="kpi-tag">{{ k.tag }}</div>
             <div class="tp-status" v-if="k.status" :style="`color:${k.color}`">{{ k.status }}</div>
             <div class="kpi-foot">{{ k.foot }}</div>
+            <div class="tp-miss" v-if="k.orpMiss">
+              <i class="bx bx-calendar-x"></i> วันที่พลาด: {{ k.orpMiss }}
+            </div>
           </div>
         </div>
       </div>
@@ -496,9 +499,21 @@ export default {
       const kwoS      = kwoSVal !== null ? kwoSVal.toFixed(2) : '—';
       const kwoSMeter = kwoSVal !== null ? Math.max(0,Math.min(100,Math.round((1-kwoSVal/15)*100))) : 0;
       const kwoSColor = kwoSMeter>=70?t.hOk:kwoSMeter>=40?t.hWarn:t.hCrit;
+      // Most recent missed ORP days (top 3, desc)
+      const missedRows = this.monthData
+        .filter(r => r.orp_serum!=null && r.orp_latex!=null
+          && (r.orp_serum<=this.threshORP || r.orp_latex<=this.threshORP))
+        .sort((a,b) => b.day - a.day)
+        .slice(0, 3);
+      const orpMiss = (() => {
+        if (!missedRows.length) return null;
+        const dt = new Date(); dt.setMonth(dt.getMonth() - this.monthOffset);
+        const mon = dt.toLocaleString('en', { month: 'short' });
+        return missedRows.map(r => r.day).join(', ') + ' ' + mon;
+      })();
       return [
         { tag:'TREAT. EFFICIENCY', big:effVal.toFixed(2),  unit:'m³/kWh', color:effColor,  foot:'Flow ÷ Energy — Higher is Better', meter:effMeter,  meterColor:effColor,  status:effMeter>=100?'OPTIMAL':effMeter>=60?'MODERATE':'NEEDS WORK' },
-        { tag:'ORP ACHIEVEMENT',   big:orpAch,    unit:'%',      color:orpColor,  foot:`${orpOk}/${d.length} days ORP > 150 mV` },
+        { tag:'ORP ACHIEVEMENT',   big:orpAch,    unit:'%',      color:orpColor,  foot:`${orpOk}/${d.length} days ORP > ${this.threshORP} mV`, orpMiss },
       ];
     },
     annualStats() {
@@ -1040,6 +1055,12 @@ export default {
   padding:1px 6px; border-radius:3px; display:inline-block;
   background:color-mix(in srgb,var(--c) 16%,transparent);
 }
+.tp-miss {
+  font-size:8px; color:var(--ex-h-crit); opacity:.85; margin-top:1px;
+  display:flex; align-items:center; justify-content:center; gap:3px; width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.tp-miss i { font-size:10px; flex-shrink:0; }
 
 /* ── View toggle ── */
 .view-toggle { display:flex; gap:2px; background:var(--ex-mn-bg); border:1px solid var(--ex-mn-bdr); border-radius:6px; padding:2px; }
