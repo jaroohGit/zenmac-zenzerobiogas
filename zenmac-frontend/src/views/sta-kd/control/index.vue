@@ -7,6 +7,77 @@
     </div>
     <ProhibitStatusBar />
 
+    <!-- ── Web Authority Control Panel ── -->
+    <div class="wcp-panel">
+      <div class="wcp-left">
+        <div class="wcp-dot" :class="mqttStore.mqttConnected ? 'wcp-dot-on' : 'wcp-dot-off'"></div>
+        <span class="wcp-label">WEB CONTROL</span>
+        <span class="wcp-authority-chip" :class="'wcp-auth-' + mqttStore.authorityTier">
+          {{ { local: '🖥 LOCAL', hmi: '📺 HMI', web: '🌐 WEB' }[mqttStore.authorityTier] }}
+        </span>
+        <span class="wcp-status-ts" v-if="statusTs">polled {{ statusTs }}</span>
+      </div>
+      <div class="wcp-right">
+        <!-- REQUEST: available when authority is not 'web' -->
+        <button v-if="mqttStore.authorityTier !== 'web'"
+                class="wcp-btn wcp-btn-request"
+                @click="requestControl"
+                :disabled="loadingBtns['REQUEST']">
+          <span v-if="loadingBtns['REQUEST']" class="btn-spin"></span>
+          <template v-else><i class="bx bx-upload"></i> REQUEST CONTROL</template>
+        </button>
+        <!-- RELEASE: shown when web is already in control -->
+        <button v-else
+                class="wcp-btn wcp-btn-release"
+                @click="releaseControl"
+                :disabled="loadingBtns['RELEASE']">
+          <span v-if="loadingBtns['RELEASE']" class="btn-spin"></span>
+          <template v-else><i class="bx bx-log-out"></i> RELEASE</template>
+        </button>
+        <!-- STATUS: always available -->
+        <button class="wcp-btn wcp-btn-status"
+                @click="queryStatus"
+                :disabled="loadingBtns['STATUS']">
+          <span v-if="loadingBtns['STATUS']" class="btn-spin"></span>
+          <template v-else><i class="bx bx-refresh"></i> STATUS</template>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status detail panel (expands after STATUS query) -->
+    <transition name="wcp-fade">
+      <div v-if="statusVisible && statusData" class="wcp-status-panel">
+        <div class="wcp-status-row">
+          <span class="wcp-skey">MQTT</span>
+          <span class="wcp-sval" :class="statusData.connected ? 'wcp-ok' : 'wcp-err'">
+            {{ statusData.connected ? '● CONNECTED' : '○ DISCONNECTED' }}
+          </span>
+        </div>
+        <div class="wcp-status-row">
+          <span class="wcp-skey">AUTHORITY</span>
+          <span class="wcp-sval">{{ statusData.authority }}</span>
+        </div>
+        <div class="wcp-status-row">
+          <span class="wcp-skey">ACTIVE MODE</span>
+          <span class="wcp-sval">{{ statusData.mode ? statusData.mode.replace(/_/g,'-') : '—' }}</span>
+        </div>
+        <div class="wcp-status-row">
+          <span class="wcp-skey">OPERATIONS</span>
+          <span class="wcp-sval">{{ statusData.opCount }} logged</span>
+        </div>
+        <div class="wcp-status-row">
+          <span class="wcp-skey">ACTIVE BLOCKS</span>
+          <span class="wcp-sval" :class="statusData.blocks > 0 ? 'wcp-warn' : 'wcp-ok'">
+            {{ statusData.blocks > 0 ? '⚠ ' + statusData.blocks : '✓ NONE' }}
+          </span>
+        </div>
+        <div class="wcp-status-row">
+          <span class="wcp-skey">QUERIED AT</span>
+          <span class="wcp-sval">{{ statusData.ts }}</span>
+        </div>
+      </div>
+    </transition>
+
     <!-- Active mode indicator + disable button -->
     <div v-if="prohibitStore.currentMode" class="kd-mode-bar">
       <span class="kd-mode-bar-label">● {{ prohibitStore.currentMode.replace(/_/g, '-') }} ACTIVE</span>
@@ -446,7 +517,8 @@
 
 <script>
 import { mapGetters } from 'vuex';
-import { useProhibit } from '@/composables/useProhibit';
+import { useProhibit }    from '@/composables/useProhibit';
+import { useMqttStore }   from '@/stores/useMqttStore';
 
 const DEFAULT_BANDS = () => [
   { zone:'HH', color:'#dd4444', orp_lo:150,  orp_hi:999,  flow_cmm:20.0 },
@@ -461,7 +533,8 @@ export default {
 
   setup() {
     const { guardedAction, store } = useProhibit();
-    return { guardedAction, prohibitStore: store };
+    const mqtt = useMqttStore();
+    return { guardedAction, prohibitStore: store, mqttStore: mqtt };
   },
 
   data() {
@@ -497,6 +570,9 @@ export default {
       arpBandsSerum: DEFAULT_BANDS(),
       arpBandsLatex: DEFAULT_BANDS(),
       loadingBtns:   {},
+      statusVisible: false,
+      statusData:    null,
+      statusTs:      null,
     };
   },
   computed: {
@@ -592,6 +668,43 @@ export default {
         const payload = { mode, _meta: this._mqttMeta() };
         console.log('[MQTT] kd:mode:disable', payload);
       }, { cooldownMs: 2000, target: mode });
+    },
+
+    // ── Authority & status ───────────────────────────────────────────────
+    requestControl() {
+      this._startLoading('REQUEST');
+      this.mqttStore.setAuthorityTier('web');
+      this.statusVisible = false;
+      var payload = { action: 'REQUEST_CONTROL', source: 'web', _meta: this._mqttMeta() };
+      console.log('[MQTT] kd:authority:request', payload);
+    },
+
+    releaseControl() {
+      this._startLoading('RELEASE');
+      this.mqttStore.setAuthorityTier('hmi');
+      var payload = { action: 'RELEASE_CONTROL', source: 'web', _meta: this._mqttMeta() };
+      console.log('[MQTT] kd:authority:release', payload);
+    },
+
+    queryStatus() {
+      var self = this;
+      this._startLoading('STATUS', 700);
+      var now = new Date();
+      var ts  = now.toLocaleTimeString('th-TH', { hour12: false });
+      this.statusTs = ts;
+      setTimeout(function() {
+        self.statusData = {
+          connected: self.mqttStore.mqttConnected,
+          authority: self.mqttStore.authorityTier.toUpperCase(),
+          mode:      self.prohibitStore.currentMode,
+          opCount:   self.prohibitStore.operationLog.length,
+          blocks:    self.prohibitStore.activeBlocks.length,
+          ts:        ts,
+        };
+        self.statusVisible = true;
+      }, 700);
+      var payload = { action: 'STATUS_REQUEST', source: 'web', _meta: this._mqttMeta() };
+      console.log('[MQTT] kd:status:request', payload);
     },
 
     // ── Helpers ──────────────────────────────────────────────────────────
@@ -1170,4 +1283,94 @@ export default {
 }
 .kd-mode-bar-disable:hover { background: rgba(255,64,64,.18); }
 .kd-mode-bar-disable:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ══ Web Control Panel ══ */
+.wcp-panel {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px;
+  background: linear-gradient(90deg, rgba(0,212,255,.05) 0%, rgba(8,14,26,0) 70%);
+  border: 1px solid rgba(0,212,255,.14);
+  border-radius: 10px;
+}
+.wcp-left  { display: flex; align-items: center; gap: 10px; }
+.wcp-right { display: flex; align-items: center; gap: 7px; }
+
+.wcp-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.wcp-dot-on {
+  background: #00e87a; box-shadow: 0 0 8px rgba(0,232,122,.6);
+  animation: wcpdot 1.8s ease-in-out infinite;
+}
+.wcp-dot-off { background: #ff4040; box-shadow: 0 0 6px rgba(255,64,64,.4); }
+@keyframes wcpdot { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+.wcp-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 800;
+  color: rgba(200,220,240,.4); letter-spacing: .1em;
+}
+.wcp-authority-chip {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px; border: 1px solid; letter-spacing: .06em;
+  transition: all .2s;
+}
+.wcp-auth-web   { color: #00d4ff; border-color: rgba(0,212,255,.4);  background: rgba(0,212,255,.1); }
+.wcp-auth-hmi   { color: #ffb800; border-color: rgba(255,184,0,.4);  background: rgba(255,184,0,.1); }
+.wcp-auth-local { color: #ff4040; border-color: rgba(255,64,64,.4);  background: rgba(255,64,64,.1); }
+
+.wcp-status-ts {
+  font-family: var(--font-mono); font-size: 9px; color: rgba(200,220,240,.22);
+}
+
+.wcp-btn {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 6px 14px; border-radius: 6px; cursor: pointer; border: 1px solid;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: all .15s; letter-spacing: .05em;
+}
+.wcp-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.wcp-btn-request {
+  background: rgba(0,232,122,.1); color: #00e87a; border-color: rgba(0,232,122,.3);
+}
+.wcp-btn-request:hover:not(:disabled) {
+  background: rgba(0,232,122,.18); box-shadow: 0 0 12px rgba(0,232,122,.2);
+}
+.wcp-btn-release {
+  background: rgba(255,184,0,.1); color: #ffb800; border-color: rgba(255,184,0,.3);
+}
+.wcp-btn-release:hover:not(:disabled) { background: rgba(255,184,0,.18); }
+
+.wcp-btn-status {
+  background: rgba(0,212,255,.08); color: var(--cyan); border-color: rgba(0,212,255,.25);
+}
+.wcp-btn-status:hover:not(:disabled) {
+  background: rgba(0,212,255,.15); box-shadow: 0 0 10px rgba(0,212,255,.15);
+}
+
+/* Status detail grid */
+.wcp-status-panel {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 16px;
+  padding: 12px 16px;
+  background: rgba(0,212,255,.035);
+  border: 1px solid rgba(0,212,255,.11);
+  border-radius: 8px;
+}
+.wcp-status-row { display: flex; flex-direction: column; gap: 3px; }
+.wcp-skey {
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  color: rgba(200,220,240,.22); letter-spacing: .13em;
+}
+.wcp-sval {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: rgba(200,220,240,.7); letter-spacing: .04em;
+}
+.wcp-ok   { color: #00e87a !important; }
+.wcp-err  { color: #ff4040 !important; }
+.wcp-warn { color: #ffb800 !important; }
+
+/* Status panel enter/leave */
+.wcp-fade-enter-active, .wcp-fade-leave-active { transition: opacity .25s, transform .25s; }
+.wcp-fade-enter-from  { opacity: 0; transform: translateY(-6px); }
+.wcp-fade-leave-to    { opacity: 0; transform: translateY(-4px); }
 </style>
