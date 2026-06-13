@@ -19,8 +19,8 @@ export const CONTROL_MODES = /** @type {const} */ ([
   'AIRFLOW_ORP',
 ]);
 
-const DEDUP_BUCKET_MS = 5_000;
-const DEDUP_TTL_MS    = 10_000;
+const DEDUP_BUCKET_MS = 5000;
+const DEDUP_TTL_MS    = 10000;
 
 export const useProhibitStore = defineStore('prohibit', {
 

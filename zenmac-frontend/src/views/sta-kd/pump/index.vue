@@ -5,6 +5,7 @@
       <h1 class="kd-page-title">PUMP MANAGEMENT</h1>
       <span class="kd-breadcrumb">STA-KD / PUMP</span>
     </div>
+    <ProhibitStatusBar />
 
     <!-- KPI Row -->
     <div class="kd-kpi-row">

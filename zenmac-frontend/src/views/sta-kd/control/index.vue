@@ -5,6 +5,7 @@
       <h1 class="kd-page-title">PROCESS CONTROL</h1>
       <span class="kd-breadcrumb">STA-KD / CONTROL</span>
     </div>
+    <ProhibitStatusBar />
 
     <!-- Control Tabs -->
     <div class="kd-tab-bar">
