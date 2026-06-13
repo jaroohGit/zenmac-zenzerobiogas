@@ -519,6 +519,7 @@
 import { mapGetters } from 'vuex';
 import { useProhibit }    from '@/composables/useProhibit';
 import { useMqttStore }   from '@/stores/useMqttStore';
+import { on, getSocket }  from '@/services/staKdSocket';
 
 const DEFAULT_BANDS = () => [
   { zone:'HH', color:'#dd4444', orp_lo:150,  orp_hi:999,  flow_cmm:20.0 },
@@ -605,6 +606,22 @@ export default {
       return 4;
     },
   },
+  mounted() {
+    getSocket();
+    this._unsubAuthority = on('kd:authority', (data) => {
+      if (data && data.tier) {
+        this.mqttStore.setAuthorityTier(data.tier);
+        if (data.tier !== 'web') {
+          this.statusVisible = false;
+        }
+      }
+    });
+  },
+
+  beforeUnmount() {
+    if (this._unsubAuthority) this._unsubAuthority();
+  },
+
   watch: {
     activeTab(val) {
       if (val === 'turning') this.$nextTick(this.drawLoopChart);
@@ -672,6 +689,8 @@ export default {
 
     // ── Authority & status ───────────────────────────────────────────────
     requestControl() {
+      // Optimistic — web claims authority immediately.
+      // HMI/SCADA can reclaim at any time by pushing kd:authority { tier:'hmi'|'local' }.
       this._startLoading('REQUEST');
       this.mqttStore.setAuthorityTier('web');
       this.statusVisible = false;
@@ -682,7 +701,7 @@ export default {
     releaseControl() {
       this._startLoading('RELEASE');
       this.mqttStore.setAuthorityTier('hmi');
-      var payload = { action: 'RELEASE_CONTROL', source: 'web', _meta: this._mqttMeta() };
+      var payload = { action: 'RELEASE_CONTROL', source: 'web', target_tier: 'hmi', _meta: this._mqttMeta() };
       console.log('[MQTT] kd:authority:release', payload);
     },
 
